@@ -9,12 +9,14 @@ import (
 	"net/url"
 )
 
+// PKCS7UnPadding PKCS7UnPadding
 func PKCS7UnPadding(origData []byte) []byte {
 	length := len(origData)
 	unpadding := int(origData[length-1])
 	return origData[:(length - unpadding)]
 }
 
+// AesCBCDecrypt AesCBCDecrypt
 func AesCBCDecrypt(encryptData, key, iv []byte) ([]byte, error) {
 
 	block, err := aes.NewCipher(key)
@@ -38,22 +40,26 @@ func AesCBCDecrypt(encryptData, key, iv []byte) ([]byte, error) {
 	return decryptedData, nil
 }
 
+// Md5 Md5
 func Md5(str string) string {
 	h := md5.New()
 	h.Write([]byte(str))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+// Base64Encode Base64Encode
 func Base64Encode(str string) string {
 	return base64.StdEncoding.EncodeToString([]byte(str))
 }
 
+// Base64Decode Base64Decode
 func Base64Decode(str string) string {
 	decodestr, _ := base64.StdEncoding.DecodeString(str)
 	return string(decodestr)
 }
 
-func UrlEncode(str string) (string, error) {
+// URLEncode URLEncode
+func URLEncode(str string) (string, error) {
 	u, err := url.Parse(str)
 	if err != nil {
 		return "", err

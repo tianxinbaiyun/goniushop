@@ -5,19 +5,21 @@ import (
 	"github.com/tianxinbaiyun/goniushop/utils"
 )
 
-func GetChildCategoryId(categoryid int) []int64 {
+// GetChildCategoryID GetChildCategoryID
+func GetChildCategoryID(categoryID int) []int64 {
 
 	o := orm.NewOrm()
-	categorytable := new(NsGoodsCategory)
+	categoryTable := new(NsGoodsCategory)
 	var childids []orm.Params
-	o.QueryTable(categorytable).Filter("pid", categoryid).Limit(10000).Values(&childids, "category_id")
-	childintids := utils.ExactMapValues2Int64Array(childids, "Id")
-	return childintids
+	_, _ = o.QueryTable(categoryTable).Filter("pid", categoryID).Limit(10000).Values(&childids, "category_id")
+	childIntIDs := utils.ExactMapValues2Int64Array(childids, "Id")
+	return childIntIDs
 }
 
-func GetCategoryWhereIn(categoryid int) []int64 {
+// GetCategoryWhereIn GetCategoryWhereIn
+func GetCategoryWhereIn(categoryID int) []int64 {
 
-	childintids := GetChildCategoryId(categoryid)
-	childintids = append(childintids, int64(categoryid))
-	return childintids
+	childIntIDs := GetChildCategoryID(categoryID)
+	childIntIDs = append(childIntIDs, int64(categoryID))
+	return childIntIDs
 }

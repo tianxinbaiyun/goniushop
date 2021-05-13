@@ -5,7 +5,7 @@ import (
 	"github.com/tianxinbaiyun/goniushop/utils"
 )
 
-func getLoginUserId() int {
-	intuserId := utils.String2Int(services.LoginUserId)
-	return intuserId
+func getLoginUserID() int {
+	intUserID := utils.String2Int(services.LoginUserID)
+	return intUserID
 }

@@ -5,13 +5,9 @@ import (
 	"github.com/tianxinbaiyun/goniushop/services"
 )
 
-/**
- * 获取最新的订单物流信息
- * @param orderId
- * @returns {Promise.<*>}
- */
-func GetLatestOrderExpress(orderid int) services.ExpressRtnInfo {
-	var expressinfo services.ExpressRtnInfo = services.ExpressRtnInfo{
+// GetLatestOrderExpress 获取最新的订单物流信息
+func GetLatestOrderExpress(orderID int) services.ExpressRtnInfo {
+	var expressInfo = services.ExpressRtnInfo{
 		ShipperCode:  "",
 		ShipperName:  "",
 		LogisticCode: "",
@@ -22,37 +18,37 @@ func GetLatestOrderExpress(orderid int) services.ExpressRtnInfo {
 	o := orm.NewOrm()
 
 	//获取订单快递单
-	orderexpresstable := new(NsOrderGoodsExpress)
-	var orderexpress NsOrderGoodsExpress
-	err := o.QueryTable(orderexpresstable).Filter("order_id", orderid).One(&orderexpress)
+	orderExpressTable := new(NsOrderGoodsExpress)
+	var orderExpress NsOrderGoodsExpress
+	err := o.QueryTable(orderExpressTable).Filter("order_id", orderID).One(&orderExpress)
 	if err == orm.ErrNoRows {
-		return expressinfo
+		return expressInfo
 	}
 
-	if orderexpress.ShipperCode == "" {
-		return expressinfo
+	if orderExpress.ShipperCode == "" {
+		return expressInfo
 	}
-	// expressinfo.ShipperCode = orderexpress.ShipperCode
-	// expressinfo.ShipperName = orderexpress.ShipperName
+	// expressInfo.ShipperCode = orderExpress.ShipperCode
+	// expressInfo.ShipperName = orderExpress.ShipperName
 
-	// expressinfo.RequestTime = utils.GetTimestamp()
+	// expressInfo.RequestTime = utils.GetTimestamp()
 
-	// expressserviceres := services.QueryExpress(expressinfo.ShipperCode, expressinfo.LogisticCode, "")
-	// nowtime := utils.GetTimestamp()
+	// expressServiceRes := services.QueryExpress(expressInfo.ShipperCode, expressInfo.LogisticCode, "")
+	// nowTime := utils.GetTimestamp()
 
-	// if expressserviceres.Success {
-	// 	expressinfo.Traces = expressserviceres.Traces
-	// 	expressinfo.IsFinish = expressserviceres.IsFinish
-	// 	expressinfo.RequestTime = nowtime
+	// if expressServiceRes.Success {
+	// 	expressInfo.Traces = expressServiceRes.Traces
+	// 	expressInfo.IsFinish = expressServiceRes.IsFinish
+	// 	expressInfo.RequestTime = nowTime
 	// }
 
-	// traces, _ := json.Marshal(expressinfo.Traces)
+	// traces, _ := json.Marshal(expressInfo.Traces)
 
-	// o.QueryTable(orderexpresstable).Filter("id", orderexpress.Id).Update(orm.Params{
-	// 	"request_time":  nowtime,
-	// 	"update_time":   nowtime,
+	// o.QueryTable(orderExpressTable).Filter("id", orderExpress.ID).Update(orm.Params{
+	// 	"request_time":  nowTime,
+	// 	"update_time":   nowTime,
 
 	// 	"request_count": orm.ColValue(orm.ColAdd, 1)})
 
-	return expressinfo
+	return expressInfo
 }

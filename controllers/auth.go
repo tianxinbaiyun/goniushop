@@ -13,86 +13,93 @@ import (
 	"github.com/tianxinbaiyun/goniushop/utils"
 )
 
+// AuthController AuthController
 type AuthController struct {
 	beego.Controller
 }
 
+// AuthLoginBody AuthLoginBody
 type AuthLoginBody struct {
 	Code     string               `json:"code"`
 	UserInfo services.ResUserInfo `json:"userInfo"`
 }
 
-func (this *AuthController) Auth_LoginByWeixin() {
+// AuthLoginByWeixin AuthLoginByWeixin
+func (c *AuthController) AuthLoginByWeixin() {
 
 	var alb AuthLoginBody
-	body := this.Ctx.Input.RequestBody
+	body := c.Ctx.Input.RequestBody
 
 	err := json.Unmarshal(body, &alb)
 	if err != nil {
 		logs.Debug("json Unmarshal,alb:%v, error,err:%v", alb, err)
 	}
 	logs.Debug("json Unmarshal success,alb:%v", alb)
-	clientIP := this.Ctx.Input.IP()
+	clientIP := c.Ctx.Input.IP()
 	nowTime := int(utils.GetTimestamp())
 	userInfo := services.Login(alb.Code, alb.UserInfo)
 	if userInfo == nil {
 		logs.Debug("auth ,get user error，userInfo:%v,err:%v,", userInfo, err)
+		return
 	}
 	logs.Debug("Login success,Code:%v userInfo %v", alb.Code, userInfo)
 	//开始事务
 	rtnInfo := make(map[string]interface{})
 	o := orm.NewOrm()
-	o.Begin()
+	_ = o.Begin()
 	defer func() {
 		if err != nil {
-			o.Rollback()
+			_ = o.Rollback()
 			logs.Debug("this has a err ,err:%v", err)
-			utils.ReturnHTTPError(&this.Controller, 400, "授权失败")
-			this.ServeJSON()
+			utils.ReturnHTTPError(&c.Controller, 400, "授权失败")
+			c.ServeJSON()
 			return
-		} else {
-			err = o.Commit()
-			utils.ReturnHTTPSuccess(&this.Controller, rtnInfo)
-			this.ServeJSON()
 		}
+		err = o.Commit()
+		if err != nil {
+			return
+		}
+		utils.ReturnHTTPSuccess(&c.Controller, rtnInfo)
+		c.ServeJSON()
+		return
 	}()
 
 	var user models.SysUser
-	usertable := new(models.SysUser)
-	err = o.QueryTable(usertable).Filter("wx_openid", userInfo.OpenID).One(&user)
+	userTable := new(models.SysUser)
+	err = o.QueryTable(userTable).Filter("wx_openid", userInfo.OpenID).One(&user)
 	if err == orm.ErrNoRows {
 		initPasswd := []byte(userInfo.OpenID)
 		passwd := md5.Sum(initPasswd)
-		newuser := models.SysUser{
+		newUser := models.SysUser{
 			UserName:         utils.GetUUID(),
 			UserPassword:     fmt.Sprintf("%x", passwd),
 			WxOpenid:         userInfo.OpenID,
-			UserHeadimg:      userInfo.AvatarUrl,
+			UserHeadimg:      userInfo.AvatarURL,
 			Sex:              int16(userInfo.Gender),
-			LastLoginIp:      clientIP,
+			LastLoginIP:      clientIP,
 			LastLoginTime:    nowTime,
 			LastLoginType:    1,
 			RegTime:          nowTime,
 			NickName:         userInfo.NickName,
-			CurrentLoginIp:   clientIP,
+			CurrentLoginIP:   clientIP,
 			CurrentLoginTime: nowTime,
 			CurrentLoginType: 1,
 			IsMember:         1,
 			UserStatus:       1,
 			LoginNum:         1,
 		}
-		_, err = o.Insert(&newuser)
+		_, err = o.Insert(&newUser)
 		if err != nil {
-			logs.Debug("insert sysuser error,err:%v", err)
+			logs.Debug("insert sysUser error,err:%v", err)
 			return
 		}
-		err = o.QueryTable(usertable).Filter("wx_openid", userInfo.OpenID).One(&user)
+		err = o.QueryTable(userTable).Filter("wx_openid", userInfo.OpenID).One(&user)
 		if err != nil {
-			logs.Debug("insert sysuser success, fetch sysuser error,err:%v", err)
+			logs.Debug("insert sysUser success, fetch sysUser error,err:%v", err)
 			return
 		}
 		member := models.NsMember{
-			Uid:         user.Id,
+			UID:         user.ID,
 			MemberName:  user.UserName,
 			MemberLevel: 47,
 			RegTime:     nowTime,
@@ -105,17 +112,17 @@ func (this *AuthController) Auth_LoginByWeixin() {
 	}
 
 	userinfo := make(map[string]interface{})
-	userinfo["id"] = user.Id
+	userinfo["id"] = user.ID
 	userinfo["username"] = user.UserName
 	userinfo["nickname"] = user.NickName
 	userinfo["gender"] = user.Sex
 	userinfo["avatar"] = user.UserHeadimg
 	userinfo["birthday"] = user.Birthday
 
-	user.LastLoginIp = user.CurrentLoginIp
+	user.LastLoginIP = user.CurrentLoginIP
 	user.LastLoginTime = user.CurrentLoginTime
 	user.LastLoginType = user.CurrentLoginType
-	user.CurrentLoginIp = clientIP
+	user.CurrentLoginIP = clientIP
 	user.CurrentLoginTime = nowTime
 	user.CurrentLoginType = 1
 	user.LoginNum = user.LoginNum + 1
@@ -123,8 +130,8 @@ func (this *AuthController) Auth_LoginByWeixin() {
 
 	}
 
-	sessionKey := services.Create(utils.Int2String(user.Id))
-	//fmt.Println("sessionkey==" + sessionKey)
+	sessionKey := services.Create(utils.Int2String(user.ID))
+	//fmt.Println("sessionKey==" + sessionKey)
 
 	rtnInfo["token"] = sessionKey
 	rtnInfo["userInfo"] = userinfo

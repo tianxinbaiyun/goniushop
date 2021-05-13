@@ -7,78 +7,84 @@ import (
 	"github.com/tianxinbaiyun/goniushop/utils"
 )
 
+// CatalogController CatalogController
 type CatalogController struct {
 	beego.Controller
 }
 
+// CurCategory CurCategory
 type CurCategory struct {
 	models.NsGoodsCategory
 	SubCategoryList []models.NsGoodsCategory `json:"subCategoryList"`
 }
 
-type CateLogIndexRtnJson struct {
+// CateLogIndexRtnJSON CateLogIndexRtnJSON
+type CateLogIndexRtnJSON struct {
 	CategoryList    []models.NsGoodsCategory `json:"categoryList"`
 	CurrentCategory CurCategory              `json:"currentCategory"`
 	CategoryAd      models.NsPlatformAdv     `json:"categoryAd"`
 }
 
-func (this *CatalogController) Catalog_Index() {
+// CatalogIndex CatalogIndex
+func (c *CatalogController) CatalogIndex() {
 
-	categoryId := this.GetString("id")
+	categoryID := c.GetString("id")
 	// orm.Debug = true
 	o := orm.NewOrm()
 	//获取广告
 	var ad models.NsPlatformAdv
-	adtable := new(models.NsPlatformAdv)
-	o.QueryTable(adtable).Filter("ap_id", 1162).One(&ad)
+	adTable := new(models.NsPlatformAdv)
+	o.QueryTable(adTable).Filter("ap_id", 1162).One(&ad)
 
 	//获取分类
 	var categories []models.NsGoodsCategory
-	categorytable := new(models.NsGoodsCategory)
-	o.QueryTable(categorytable).Filter("pid", 0).Limit(10).All(&categories)
+	categoryTable := new(models.NsGoodsCategory)
+	o.QueryTable(categoryTable).Filter("pid", 0).Limit(10).All(&categories)
 
-	var currentCategory *models.NsGoodsCategory = nil
-	if categoryId != "" {
-		o.QueryTable(categorytable).Filter("category_id", categoryId).One(currentCategory)
+	var currentCategory *models.NsGoodsCategory
+	if categoryID != "" {
+		o.QueryTable(categoryTable).Filter("category_id", categoryID).One(currentCategory)
 	}
-	if currentCategory == nil {
-		currentCategory = &categories[0]
-	}
+
+	currentCategory = &categories[0]
+
 	curCategory := new(CurCategory)
-	if currentCategory != nil && currentCategory.Id > 0 {
+	if currentCategory != nil && currentCategory.ID > 0 {
 		var subCategories []models.NsGoodsCategory
-		o.QueryTable(categorytable).Filter("pid", currentCategory.Id).All(&subCategories)
+		o.QueryTable(categoryTable).Filter("pid", currentCategory.ID).All(&subCategories)
 		curCategory.SubCategoryList = subCategories
 		curCategory.NsGoodsCategory = *currentCategory
 	}
-	utils.ReturnHTTPSuccess(&this.Controller, CateLogIndexRtnJson{categories, *curCategory, ad})
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, CateLogIndexRtnJSON{categories, *curCategory, ad})
+	c.ServeJSON()
 }
 
-type CateLogCurRtnJson struct {
+// CateLogCurRtnJSON CateLogCurRtnJSON
+type CateLogCurRtnJSON struct {
 	CurrentCategory CurCategory `json:"currentCategory"`
 }
 
-func (this *CatalogController) Catalog_Current() {
+// CatalogCurrent CatalogCurrent
+func (c *CatalogController) CatalogCurrent() {
 
-	categoryId := this.GetString("id")
+	categoryID := c.GetString("id")
 
 	o := orm.NewOrm()
-	categorytable := new(models.NsGoodsCategory)
+	categoryTable := new(models.NsGoodsCategory)
 	currentCategory := new(models.NsGoodsCategory)
-	if categoryId != "" {
-		o.QueryTable(categorytable).Filter("category_id", categoryId).One(currentCategory)
+	if categoryID != "" {
+		o.QueryTable(categoryTable).Filter("category_id", categoryID).One(currentCategory)
 	}
 
 	curCategory := new(CurCategory)
-	if currentCategory != nil && currentCategory.Id > 0 {
+	if currentCategory.ID > 0 {
 		var subCategories []models.NsGoodsCategory
-		o.QueryTable(categorytable).Filter("pid", currentCategory.Id).All(&subCategories)
+		o.QueryTable(categoryTable).Filter("pid", currentCategory.ID).All(&subCategories)
 		curCategory.SubCategoryList = subCategories
 		curCategory.NsGoodsCategory = *currentCategory
 	}
 
-	utils.ReturnHTTPSuccess(&this.Controller, CateLogCurRtnJson{*curCategory})
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, CateLogCurRtnJSON{*curCategory})
+	c.ServeJSON()
 
 }

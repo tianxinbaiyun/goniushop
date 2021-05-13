@@ -12,23 +12,31 @@ import (
 	"github.com/tianxinbaiyun/goniushop/utils"
 )
 
+// CartController CartController
 type CartController struct {
 	beego.Controller
 }
 
+// CartTotal CartTotal
 type CartTotal struct {
 	GoodsCount         int     `json:"goodsCount"`
 	GoodsAmount        float64 `json:"goodsAmount"`
 	CheckedGoodsCount  int     `json:"checkedGoodsCount"`
 	CheckedGoodsAmount float64 `json:"checkedGoodsAmount"`
 }
+
+// GoodsCount GoodsCount
 type GoodsCount struct {
 	CartTotal CartTotal `json:"cartTotal"`
 }
+
+// IndexCartData IndexCartData
 type IndexCartData struct {
 	CartList  []newCart `json:"cartList"`
 	CartTotal CartTotal `json:"cartTotal"`
 }
+
+// newCart newCart
 type newCart struct {
 	models.NsCart
 	PicCoverBig string `json:"pic_cover_big,omitempty"`
@@ -37,8 +45,9 @@ type newCart struct {
 	SkuName     string `json:"sku_name,omitempty"`
 }
 
+// getCart getCart
 func getCart() IndexCartData {
-	intuserId := getLoginUserId()
+	intUserID := getLoginUserID()
 	o := orm.NewOrm()
 	qb, _ := orm.NewQueryBuilder("mysql")
 	var carts []newCart
@@ -48,12 +57,12 @@ func getCart() IndexCartData {
 		On("c.goods_picture = p.pic_id").
 		LeftJoin("ns_goods_sku s").
 		On("c.sku_id = s.sku_id").
-		Where(fmt.Sprintf("c.buyer_id = %d", intuserId))
+		Where(fmt.Sprintf("c.buyer_id = %d", intUserID))
 
 	sql := qb.String()
 	num, err := o.Raw(sql).QueryRows(&carts)
 	if err != nil {
-		logs.Debug("get carts erroor,err:%v,num:%v", err, num)
+		logs.Debug("get carts error,err:%v,num:%v", err, num)
 	}
 	var goodsCount int
 	var goodsAmount float64
@@ -70,19 +79,22 @@ func getCart() IndexCartData {
 	return IndexCartData{carts, CartTotal{goodsCount, goodsAmount, checkedGoodsCount, checkedGoodsAmount}}
 }
 
-func (this *CartController) Cart_Index() {
+// CartIndex CartIndex
+func (c *CartController) CartIndex() {
 
-	utils.ReturnHTTPSuccess(&this.Controller, getCart())
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, getCart())
+	c.ServeJSON()
 }
 
+// CartAddBody CartAddBody
 type CartAddBody struct {
-	GoodsId int    `json:"goodsId"`
-	SpecIds string `json:"specIds"`
+	GoodsID int    `json:"goodsId"`
+	SpecIDs string `json:"specIds"`
 	Number  int    `json:"number"`
 }
 
-func (this *CartController) Cart_Add() {
+// CartAdd CartAdd
+func (c *CartController) CartAdd() {
 	var (
 		err error
 		ab  CartAddBody
@@ -91,239 +103,256 @@ func (this *CartController) Cart_Add() {
 		if err != nil {
 			logs.Debug("this has a err ,err:%v", err)
 		}
-		this.ServeJSON()
+		c.ServeJSON()
 		return
 	}()
 	//输入检验
-	body := this.Ctx.Input.RequestBody
+	body := c.Ctx.Input.RequestBody
 	err = json.Unmarshal(body, &ab)
 	if err != nil {
 		logs.Debug("Unmarshal RequestBody ,err:%v", err)
-		utils.ReturnHTTPError(&this.Controller, 400, "请求参数错误")
+		utils.ReturnHTTPError(&c.Controller, 400, "请求参数错误")
 		return
 	}
-	intgoodsId := ab.GoodsId
-	specIds := ab.SpecIds
-	intnumber := ab.Number
-	intuserId := getLoginUserId()
+	intGoodsID := ab.GoodsID
+	specIDs := ab.SpecIDs
+	intNumber := ab.Number
+	intUserID := getLoginUserID()
 	o := orm.NewOrm()
 	//查询商品
-	goodstable := new(models.NsGoods)
+	goodsTable := new(models.NsGoods)
 	var goods models.NsGoods
-	err = o.QueryTable(goodstable).Filter("goods_id", intgoodsId).One(&goods)
+	err = o.QueryTable(goodsTable).Filter("goods_id", intGoodsID).One(&goods)
 	if err == orm.ErrNoRows {
-		logs.Debug("goods losed ,err:%v", err)
-		utils.ReturnHTTPError(&this.Controller, 400, "商品已下架")
+		logs.Debug("goods lose ,err:%v", err)
+		utils.ReturnHTTPError(&c.Controller, 400, "商品已下架")
 		return
 	}
 	//查询库存
-	skutable := new(models.NsGoodsSku)
+	skuTable := new(models.NsGoodsSku)
 	var sku models.NsGoodsSku
-	err = o.QueryTable(skutable).Filter("goods_id", intgoodsId).Filter("attr_value_items", specIds).One(&sku)
-	if err == orm.ErrNoRows || sku.Stock < intnumber {
-		utils.ReturnHTTPError(&this.Controller, 400, "库存不足")
+	err = o.QueryTable(skuTable).Filter("goods_id", intGoodsID).Filter("attr_value_items", specIDs).One(&sku)
+	if err == orm.ErrNoRows || sku.Stock < intNumber {
+		utils.ReturnHTTPError(&c.Controller, 400, "库存不足")
 		return
 	}
 	//开始事物
-	o.Begin()
+	_ = o.Begin()
 	defer func() {
 		if err != nil {
-			o.Rollback()
+			_ = o.Rollback()
 			logs.Debug("this has a err ,err:%v", err)
-			utils.ReturnHTTPError(&this.Controller, 400, "操作撤销")
-			return
-		} else {
-			err = o.Commit()
-			utils.ReturnHTTPSuccess(&this.Controller, getCart())
+			utils.ReturnHTTPError(&c.Controller, 400, "操作撤销")
 			return
 		}
+		err = o.Commit()
+		if err != nil {
+			return
+		}
+		utils.ReturnHTTPSuccess(&c.Controller, getCart())
+		return
+
 	}()
 
-	carttable := new(models.NsCart)
+	cartTable := new(models.NsCart)
 	var cart models.NsCart
-	err = o.QueryTable(carttable).Filter("goods_id", intgoodsId).Filter("sku_id", sku.Id).
-		Filter("buyer_id", intuserId).One(&cart)
+	err = o.QueryTable(cartTable).Filter("goods_id", intGoodsID).Filter("sku_id", sku.ID).
+		Filter("buyer_id", intUserID).One(&cart)
 	if err == orm.ErrNoRows {
 		cartData := models.NsCart{
-			UserId:       intuserId,
-			GoodsId:      intgoodsId,
+			UserID:       intUserID,
+			GoodsID:      intGoodsID,
 			GoodsName:    goods.GoodsName,
-			SkuId:        sku.Id,
+			SkuID:        sku.ID,
 			SkuName:      sku.SkuName,
 			Price:        sku.Price,
-			Number:       intnumber,
+			Number:       intNumber,
 			GoodsPicture: goods.Picture,
 		}
 		_, err = o.Insert(&cartData)
 	} else {
-		if sku.Stock < (intnumber + cart.Number) {
-			utils.ReturnHTTPError(&this.Controller, 400, "库存不足")
+		if sku.Stock < (intNumber + cart.Number) {
+			utils.ReturnHTTPError(&c.Controller, 400, "库存不足")
 			return
 		}
-		_, err = o.QueryTable(carttable).Filter("cart_id", cart.Id).Update(orm.Params{"number": orm.ColValue(orm.ColAdd, intnumber)})
+		_, err = o.QueryTable(cartTable).Filter("cart_id", cart.ID).Update(orm.Params{"number": orm.ColValue(orm.ColAdd, intNumber)})
 	}
 	return
 }
 
+// CartUpdateBody CartUpdateBody
 type CartUpdateBody struct {
-	GoodsId int `json:"goodsId"`
-	SkuId   int `json:"skuId"`
+	GoodsID int `json:"goodsId"`
+	SkuID   int `json:"skuId"`
 	Number  int `json:"number"`
-	Id      int `json:"id"`
+	ID      int `json:"id"`
 }
 
-func (this *CartController) Cart_Update() {
+// CartUpdate CartUpdate
+func (c *CartController) CartUpdate() {
 
 	var ub CartUpdateBody
-	body := this.Ctx.Input.RequestBody
+	body := c.Ctx.Input.RequestBody
 	err := json.Unmarshal(body, &ub)
 	logs.Debug(ub)
 	if err != nil {
 		logs.Debug("Unmarshal RequestBody ,err:%v", err)
 	}
 
-	intgoodsId := ub.GoodsId
-	skuId := ub.SkuId
-	intnumber := ub.Number
-	intid := ub.Id
+	intGoodsID := ub.GoodsID
+	skuID := ub.SkuID
+	intNumber := ub.Number
+	intid := ub.ID
 	o := orm.NewOrm()
-	goodstable := new(models.NsGoods)
+	goodsTable := new(models.NsGoods)
 	var goods models.NsGoods
-	err = o.QueryTable(goodstable).Filter("goods_id", intgoodsId).One(&goods)
+	err = o.QueryTable(goodsTable).Filter("goods_id", intGoodsID).One(&goods)
 	if err == orm.ErrNoRows {
-		utils.ReturnHTTPError(&this.Controller, 400, "商品已下架")
-		this.ServeJSON()
+		utils.ReturnHTTPError(&c.Controller, 400, "商品已下架")
+		c.ServeJSON()
 		return
 	}
 
-	skutable := new(models.NsGoodsSku)
+	skuTable := new(models.NsGoodsSku)
 	var sku models.NsGoodsSku
-	err = o.QueryTable(skutable).Filter("goods_id", intgoodsId).Filter("sku_id", skuId).One(&sku)
-	if err == orm.ErrNoRows || sku.Stock < intnumber {
-		utils.ReturnHTTPError(&this.Controller, 400, "库存不足")
-		this.ServeJSON()
+	err = o.QueryTable(skuTable).Filter("goods_id", intGoodsID).Filter("sku_id", skuID).One(&sku)
+	if err == orm.ErrNoRows || sku.Stock < intNumber {
+		utils.ReturnHTTPError(&c.Controller, 400, "库存不足")
+		c.ServeJSON()
 		return
 	}
 	defer func() {
 		if err != nil {
-			o.Rollback()
+			_ = o.Rollback()
 			logs.Debug("this has a err ,err:%v", err)
-			utils.ReturnHTTPError(&this.Controller, 400, "操作撤销")
-			this.ServeJSON()
+			utils.ReturnHTTPError(&c.Controller, 400, "操作撤销")
+			c.ServeJSON()
 			return
-		} else {
-			err = o.Commit()
-			utils.ReturnHTTPSuccess(&this.Controller, getCart())
-			this.ServeJSON()
 		}
+		err = o.Commit()
+		if err != nil {
+			return
+		}
+		utils.ReturnHTTPSuccess(&c.Controller, getCart())
+		c.ServeJSON()
+
 	}()
 
-	carttable := new(models.NsCart)
+	cartTable := new(models.NsCart)
 	var cart models.NsCart
-	err = o.QueryTable(carttable).Filter("id", intid).One(&cart)
+	err = o.QueryTable(cartTable).Filter("id", intid).One(&cart)
 	if err != nil {
 		logs.Info("select end,cart:%v,err:%v", cart, err)
 		return
 	}
-	if sku.Stock < intnumber {
-		utils.ReturnHTTPError(&this.Controller, 400, "库存不足")
-		this.ServeJSON()
+	if sku.Stock < intNumber {
+		utils.ReturnHTTPError(&c.Controller, 400, "库存不足")
+		c.ServeJSON()
 		return
 	}
 	//开始事物
 	err = o.Begin()
-	_, err = o.QueryTable(carttable).Filter("id", intid).Update(orm.Params{
-		"num":    intnumber,
+	_, err = o.QueryTable(cartTable).Filter("id", intid).Update(orm.Params{
+		"num":    intNumber,
 		"price":  sku.Price,
-		"sku_id": sku.Id,
+		"sku_id": sku.ID,
 	})
 
 }
 
+// CartCheckedBody CartCheckedBody
 type CartCheckedBody struct {
 	IsChecked int         `json:"isChecked"`
-	Ids       interface{} `json:"ids"`
+	IDs       interface{} `json:"ids"`
 }
 
-func (this *CartController) Cart_Checked() {
+// CartChecked CartChecked
+func (c *CartController) CartChecked() {
 
 	var cb CartCheckedBody
-	body := this.Ctx.Input.RequestBody
+	body := c.Ctx.Input.RequestBody
 	err := json.Unmarshal(body, &cb)
 	if err != nil {
 		logs.Debug("json Unmarshal error，err:%v", err)
 	}
 	intisChecked := cb.IsChecked
 
-	if cb.Ids == "" {
-		this.Abort("删除出错")
+	if cb.IDs == "" {
+		c.Abort("删除出错")
 	}
-	var IdsArray []string
-	switch val := cb.Ids.(type) {
+	var IDsArray []string
+	switch val := cb.IDs.(type) {
 	// 单选
 	case float64:
-		IdsArray = append(IdsArray, utils.Int2String(int(val)))
+		IDsArray = append(IDsArray, utils.Int2String(int(val)))
 	//多选
 	case string:
-		IdsArray = strings.Split(val, ",")
+		IDsArray = strings.Split(val, ",")
 	default:
 
 	}
 
 	o := orm.NewOrm()
-	carttable := new(models.NsCart)
-	o.QueryTable(carttable).Filter("cart_id__in", IdsArray).Update(orm.Params{
+	cartTable := new(models.NsCart)
+	_, _ = o.QueryTable(cartTable).Filter("cart_id__in", IDsArray).Update(orm.Params{
 		"checked": intisChecked,
 	})
 
-	utils.ReturnHTTPSuccess(&this.Controller, getCart())
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, getCart())
+	c.ServeJSON()
 }
 
+// CartDeleteBody CartDeleteBody
 type CartDeleteBody struct {
-	Ids string `json:"ids"`
+	IDs string `json:"ids"`
 }
 
-func (this *CartController) Cart_Delete() {
+// CartDelete CartDelete
+func (c *CartController) CartDelete() {
 
 	var input CartDeleteBody
-	body := this.Ctx.Input.RequestBody
+	body := c.Ctx.Input.RequestBody
 	err := json.Unmarshal(body, &input)
 	if err != nil {
 		logs.Debug("json Unmarshal err，err:%v", err)
 	}
-	intuserId := getLoginUserId()
+	intUserID := getLoginUserID()
 
-	idsArray := strings.Split(input.Ids, ",")
+	idsArray := strings.Split(input.IDs, ",")
 
 	o := orm.NewOrm()
-	o.Begin()
-	carttable := new(models.NsCart)
-	_, err = o.QueryTable(carttable).Filter("cart_id__in", idsArray).Filter("buyer_id", intuserId).Delete()
+	_ = o.Begin()
+	cartTable := new(models.NsCart)
+	_, err = o.QueryTable(cartTable).Filter("cart_id__in", idsArray).Filter("buyer_id", intUserID).Delete()
 	defer func() {
 		if err != nil {
-			o.Rollback()
+			_ = o.Rollback()
 			logs.Debug("this has a err ,err:%v", err)
-			utils.ReturnHTTPError(&this.Controller, 400, "删除失败")
-			this.ServeJSON()
+			utils.ReturnHTTPError(&c.Controller, 400, "删除失败")
+			c.ServeJSON()
 			return
-		} else {
-			err = o.Commit()
-			utils.ReturnHTTPSuccess(&this.Controller, getCart())
-			this.ServeJSON()
 		}
+		err = o.Commit()
+		if err != nil {
+			return
+		}
+		utils.ReturnHTTPSuccess(&c.Controller, getCart())
+		c.ServeJSON()
+
 	}()
 	return
 }
 
-func (this *CartController) Cart_GoodsCount() {
+// CartGoodsCount CartGoodsCount
+func (c *CartController) CartGoodsCount() {
 
 	cartData := getCart()
-	goodscount := GoodsCount{CartTotal: CartTotal{GoodsCount: cartData.CartTotal.GoodsCount}}
-	utils.ReturnHTTPSuccess(&this.Controller, goodscount)
-	this.ServeJSON()
+	goodsCount := GoodsCount{CartTotal: CartTotal{GoodsCount: cartData.CartTotal.GoodsCount}}
+	utils.ReturnHTTPSuccess(&c.Controller, goodsCount)
+	c.ServeJSON()
 }
 
+// CartAddress CartAddress
 type CartAddress struct {
 	models.NsMemberExpressAddress
 	ProvinceName string `json:"province_name"`
@@ -332,7 +361,8 @@ type CartAddress struct {
 	FullRegion   string `json:"full_region"`
 }
 
-type CheckoutRtnJson struct {
+// CheckoutRtnJSON CheckoutRtnJSON
+type CheckoutRtnJSON struct {
 	CheckedAddress   CartAddress `json:"checkedAddress"`
 	FreightPrice     float64     `json:"freightPrice"`
 	CouponPrice      float64     `json:"couponPrice"`
@@ -341,42 +371,45 @@ type CheckoutRtnJson struct {
 	OrderTotalPrice  float64     `json:"orderTotalPrice"`
 	ActualPrice      float64     `json:"actualPrice"`
 }
+
+// CheckoutInput CheckoutInput
 type CheckoutInput struct {
-	AddressId int    `json:"address_id"`
-	CouponId  string `json:"coupon_id"`
+	AddressID int    `json:"address_id"`
+	CouponID  string `json:"coupon_id"`
 }
 
-func (this *CartController) Cart_Checkout() {
+// CartCheckout CartCheckout
+func (c *CartController) CartCheckout() {
 	var (
-		goodstotalprice float64
-		ordertotalprice float64
+		goodsTotalPrice float64
+		orderTotalPrice float64
 		actualPrice     float64
 		freightPrice    float64
 	)
-	ids := this.GetString("ids")
-	// addressId := this.GetString("intaddressid")
+	ids := c.GetString("ids")
+	// addressID := c.GetString("intAddressID")
 	if ids == "" {
-		utils.ReturnHTTPError(&this.Controller, 400, "商品未找到")
-		this.ServeJSON()
+		utils.ReturnHTTPError(&c.Controller, 400, "商品未找到")
+		c.ServeJSON()
 		return
 	}
 	o := orm.NewOrm()
 	//获取用户地址
 
-	// intaddressid := utils.String2Int(addressId)
-	addresstable := new(models.NsMemberExpressAddress)
+	// intAddressID := utils.String2Int(addressID)
+	addressTable := new(models.NsMemberExpressAddress)
 	var myaddress models.NsMemberExpressAddress
-	err := o.QueryTable(addresstable).Filter("uid", getLoginUserId()).Filter("is_default", 1).One(&myaddress)
+	err := o.QueryTable(addressTable).Filter("uid", getLoginUserID()).Filter("is_default", 1).One(&myaddress)
 	var customaddress CartAddress
 	if err != orm.ErrNoRows {
 		customaddress.NsMemberExpressAddress = myaddress
-		customaddress.ProvinceName = models.GetProvinceName(myaddress.ProvinceId)
-		customaddress.CityName = models.GetCityName(myaddress.CityId)
-		customaddress.DistrictName = models.GetDistrictName(myaddress.DistrictId)
+		customaddress.ProvinceName = models.GetProvinceName(myaddress.ProvinceID)
+		customaddress.CityName = models.GetCityName(myaddress.CityID)
+		customaddress.DistrictName = models.GetDistrictName(myaddress.DistrictID)
 		customaddress.FullRegion = customaddress.ProvinceName + customaddress.CityName + customaddress.DistrictName
 	}
 	//获取购物车
-	intuserId := getLoginUserId()
+	intUserID := getLoginUserID()
 
 	qb, _ := orm.NewQueryBuilder("mysql")
 	var carts []newCart
@@ -386,7 +419,7 @@ func (this *CartController) Cart_Checkout() {
 		On("c.goods_picture = p.pic_id").
 		LeftJoin("ns_goods_sku s").
 		On("c.sku_id = s.sku_id").
-		Where(fmt.Sprintf("c.buyer_id = %d", intuserId)).
+		Where(fmt.Sprintf("c.buyer_id = %d", intUserID)).
 		And(fmt.Sprintf("c.cart_id IN (%v)", ids))
 	sql := qb.String()
 	num, err := o.Raw(sql).QueryRows(&carts)
@@ -395,17 +428,17 @@ func (this *CartController) Cart_Checkout() {
 	}
 	// logs.Info(carts)
 	for _, v := range carts {
-		goodstotalprice += v.Price * float64(v.Number)
-		ordertotalprice += v.Price * float64(v.Number)
+		goodsTotalPrice += v.Price * float64(v.Number)
+		orderTotalPrice += v.Price * float64(v.Number)
 		actualPrice += v.Price * float64(v.Number)
 	}
-	utils.ReturnHTTPSuccess(&this.Controller, CheckoutRtnJson{
+	utils.ReturnHTTPSuccess(&c.Controller, CheckoutRtnJSON{
 		CheckedAddress:   customaddress,
 		CheckedGoodsList: carts,
-		GoodsTotalPrice:  goodstotalprice,
-		OrderTotalPrice:  ordertotalprice,
+		GoodsTotalPrice:  goodsTotalPrice,
+		OrderTotalPrice:  orderTotalPrice,
 		ActualPrice:      actualPrice,
 		FreightPrice:     freightPrice,
 	})
-	this.ServeJSON()
+	c.ServeJSON()
 }

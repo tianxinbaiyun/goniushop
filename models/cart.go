@@ -4,21 +4,24 @@ import (
 	"github.com/astaxie/beego/orm"
 )
 
+// ClearBuyGoods ClearBuyGoods
 func ClearBuyGoods(userid int) {
 
 	o := orm.NewOrm()
 
-	carttable := new(NsCart)
+	cartTable := new(NsCart)
 
-	o.QueryTable(carttable).Filter("buyer_id", userid).Delete()
+	o.QueryTable(cartTable).Filter("buyer_id", userid).Delete()
 
 }
+
+// DeleteBuyGoods DeleteBuyGoods
 func DeleteBuyGoods(userid int, ids []int) {
 
 	o := orm.NewOrm()
 
-	carttable := new(NsCart)
+	cartTable := new(NsCart)
 
-	o.QueryTable(carttable).Filter("buyer_id", userid).Filter("cart_id__in", ids).Delete()
+	o.QueryTable(cartTable).Filter("buyer_id", userid).Filter("cart_id__in", ids).Delete()
 
 }

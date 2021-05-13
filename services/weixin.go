@@ -13,6 +13,7 @@ import (
 	"github.com/tianxinbaiyun/goniushop/utils"
 )
 
+// WXLoginResponse 返回结构体
 type WXLoginResponse struct {
 	OpenID     string `json:"openid"`
 	SessionKey string `json:"session_key"`
@@ -23,15 +24,17 @@ type WXLoginResponse struct {
 
 //https://developers.weixin.qq.com/miniprogram/dev/api/wx.getUserInfo.html
 
+// Watermark Watermark
 type Watermark struct {
 	AppID     string `json:"appid"`
 	TimeStamp int64  `json:"timestamp"`
 }
 
+// WXUserInfo 微信用户
 type WXUserInfo struct {
 	OpenID    string    `json:"openId,omitempty"`
 	NickName  string    `json:"nickName"`
-	AvatarUrl string    `json:"avatarUrl"`
+	AvatarURL string    `json:"avatarUrl"`
 	Gender    int       `json:"gender"`
 	Country   string    `json:"country"`
 	Province  string    `json:"province"`
@@ -41,6 +44,7 @@ type WXUserInfo struct {
 	Watermark Watermark `json:"watermark,omitempty"`
 }
 
+// ResUserInfo 用户信息
 type ResUserInfo struct {
 	UserInfo      WXUserInfo `json:"userInfo"`
 	RawData       string     `json:"rawData"`
@@ -49,6 +53,7 @@ type ResUserInfo struct {
 	IV            string     `json:"iv"`
 }
 
+// Login 登陆
 func Login(code string, fullUserInfo ResUserInfo) *WXUserInfo {
 
 	secret := beego.AppConfig.String("weixin::secret")
@@ -85,6 +90,7 @@ func Login(code string, fullUserInfo ResUserInfo) *WXUserInfo {
 
 }
 
+// DecryptUserInfoData 数据解密
 func DecryptUserInfoData(sessionKey string, encryptedData string, iv string) *WXUserInfo {
 
 	sk, _ := base64.StdEncoding.DecodeString(sessionKey)
@@ -106,15 +112,17 @@ func DecryptUserInfoData(sessionKey string, encryptedData string, iv string) *WX
 	return &wxuserinfo
 }
 
+// PayInfo 支付信息
 type PayInfo struct {
-	OpenId         string
+	OpenID         string
 	Body           string
 	OutTradeNo     string
 	TotalFee       int64
-	SpbillCreateIp string
+	SpbillCreateIP string
 }
 
-func CreateUnifiedOrder(payinfo PayInfo) (wxpay.Params, error) {
+// CreateUnifiedOrder 创建订单
+func CreateUnifiedOrder(payInfo PayInfo) (wxpay.Params, error) {
 
 	appid := beego.AppConfig.String("weixin::appid")
 	mchid := beego.AppConfig.String("weixin::mch_id")
@@ -123,10 +131,10 @@ func CreateUnifiedOrder(payinfo PayInfo) (wxpay.Params, error) {
 	account := wxpay.NewAccount(appid, mchid, apikey, false)
 	client := wxpay.NewClient(account)
 	params := make(wxpay.Params)
-	params.SetString("body", payinfo.Body).
-		SetString("out_trade_no", payinfo.OutTradeNo).
-		SetInt64("total_fee", payinfo.TotalFee).
-		SetString("spbill_create_ip", payinfo.SpbillCreateIp).
+	params.SetString("body", payInfo.Body).
+		SetString("out_trade_no", payInfo.OutTradeNo).
+		SetInt64("total_fee", payInfo.TotalFee).
+		SetString("spbill_create_ip", payInfo.SpbillCreateIP).
 		SetString("notify_url", notifyurl).
 		SetString("trade_type", "APP")
 	return client.UnifiedOrder(params)

@@ -7,51 +7,55 @@ import (
 	"github.com/tianxinbaiyun/goniushop/utils"
 )
 
+// BrandController BrandController
 type BrandController struct {
 	beego.Controller
 }
 
-func (this *BrandController) Brand_List() {
+// BrandList BrandList
+func (c *BrandController) BrandList() {
 
-	page := this.GetString("page")
-	size := this.GetString("size")
+	page := c.GetString("page")
+	size := c.GetString("size")
 
-	var intsize int = 10
+	var intSize = 10
 	if size != "" {
-		intsize = utils.String2Int(size)
+		intSize = utils.String2Int(size)
 	}
 
-	var intpage int = 1
+	var intPage = 1
 	if page != "" {
-		intpage = utils.String2Int(page)
+		intPage = utils.String2Int(page)
 	}
 
 	o := orm.NewOrm()
-	brandtable := new(models.NsGoodsBrand)
+	brandTable := new(models.NsGoodsBrand)
 	var brands []orm.Params
-	o.QueryTable(brandtable).Values(&brands, "brand_id", "brand_name", "brand_initial", "brand_pic")
+	_, _ = o.QueryTable(brandTable).Values(&brands, "brand_id", "brand_name", "brand_initial", "brand_pic")
 
-	pagedata := utils.GetPageData(brands, intpage, intsize)
+	pageData := utils.GetPageData(brands, intPage, intSize)
 
-	utils.ReturnHTTPSuccess(&this.Controller, pagedata)
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, pageData)
+	c.ServeJSON()
 
 }
 
-type BrandDetailRtnJson struct {
+// BrandDetailRtnJSON BrandDetailRtnJSON
+type BrandDetailRtnJSON struct {
 	Data models.NsGoodsBrand
 }
 
-func (this *BrandController) Brand_Detail() {
-	id := this.GetString("id")
-	intid := utils.String2Int(id)
+// BrandDetail BrandDetail
+func (c *BrandController) BrandDetail() {
+	id := c.GetString("id")
+	intID := utils.String2Int(id)
 
 	o := orm.NewOrm()
-	brandtable := new(models.NsGoodsBrand)
+	brandTable := new(models.NsGoodsBrand)
 	var brand models.NsGoodsBrand
 
-	o.QueryTable(brandtable).Filter("brand_id", intid).One(&brand)
+	_ = o.QueryTable(brandTable).Filter("brand_id", intID).One(&brand)
 
-	utils.ReturnHTTPSuccess(&this.Controller, BrandDetailRtnJson{brand})
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, BrandDetailRtnJSON{brand})
+	c.ServeJSON()
 }

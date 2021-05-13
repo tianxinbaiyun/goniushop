@@ -9,12 +9,14 @@ import (
 	"github.com/tianxinbaiyun/goniushop/utils"
 )
 
+// Traces Traces
 type Traces struct {
 	AcceptTime    string `json:"accept_time"`
 	AcceptStation string `json:"accept_station"`
 	Remark        string `json:"remark"`
 }
 
+// ExpressRtnInfo ExpressRtnInfo
 type ExpressRtnInfo struct {
 	Success      bool     `json:"success"`
 	ShipperCode  string   `json:"shipper_code"`
@@ -25,14 +27,16 @@ type ExpressRtnInfo struct {
 	RequestTime  int64    `json:"request_time"`
 }
 
+// ExpressResult ExpressResult
 type ExpressResult struct {
 	Success bool     `json:"success"`
 	State   int      `json:"state"`
 	Traces  []Traces `json:"traces"`
 }
 
+// QueryExpress QueryExpress
 func QueryExpress(shippercode, logisticcode string, ordercode string) ExpressRtnInfo {
-	var expressinfo ExpressRtnInfo = ExpressRtnInfo{
+	var expressInfo = ExpressRtnInfo{
 		Success:      false,
 		ShipperCode:  shippercode,
 		ShipperName:  "",
@@ -52,61 +56,66 @@ func QueryExpress(shippercode, logisticcode string, ordercode string) ExpressRtn
 
 	var res ExpressResult
 	req.ToJSON(&res)
-	expressinfo.Success = res.Success
+	expressInfo.Success = res.Success
 	if res.State == 3 {
-		expressinfo.IsFinish = 1
+		expressInfo.IsFinish = 1
 	}
-	expressinfo.Traces = append(expressinfo.Traces, res.Traces...)
+	expressInfo.Traces = append(expressInfo.Traces, res.Traces...)
 
-	return expressinfo
+	return expressInfo
 
 }
 
+// ExpressFromData ExpressFromData
 type ExpressFromData struct {
 	RequestData string
-	EBusinessId string
+	EBusinessID string
 	RequestType string
 	DataSign    string
 	DataType    string
 }
 
+// GenerateFromData GenerateFromData
 func GenerateFromData(shippercode, logisticcode, ordercode string) ExpressFromData {
 	requestdata := GenerateRequestData(shippercode, logisticcode, ordercode)
-	encoderequestdata, _ := utils.UrlEncode(requestdata)
+	encoderequestdata, _ := utils.URLEncode(requestdata)
 	return ExpressFromData{
 		RequestData: encoderequestdata,
-		EBusinessId: beego.AppConfig.String("express::appid"),
+		EBusinessID: beego.AppConfig.String("express::appid"),
 		RequestType: "1002",
 		DataSign:    GenerateDataSign(requestdata),
 		DataType:    "2"}
 
 }
 
+// ExpressRequestData ExpressRequestData
 type ExpressRequestData struct {
 	OrderCode    string
 	ShipperCode  string
 	LogisticCode string
 }
 
+// GenerateRequestData GenerateRequestData
 func GenerateRequestData(shippercode, logisticcode, ordercode string) string {
 
 	data, err := json.Marshal(ExpressRequestData{ordercode, shippercode, logisticcode})
 	if err != nil {
 		return ""
-	} else {
-		return string(data)
 	}
+	return string(data)
+
 }
 
+// GenerateDataSign GenerateDataSign
 func GenerateDataSign(requestdata string) string {
 
 	md5str := utils.Md5(requestdata)
 	appkey := beego.AppConfig.String("express::appkey")
 	base64str := utils.Base64Encode(md5str + appkey)
-	rv, err := utils.UrlEncode(base64str)
+	rv, err := utils.URLEncode(base64str)
 	if err == nil {
 		return ""
-	} else {
-		return rv
 	}
+	return rv
+
 }

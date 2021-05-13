@@ -7,35 +7,38 @@ import (
 	"github.com/tianxinbaiyun/goniushop/utils"
 )
 
+// RegionController RegionController
 type RegionController struct {
 	beego.Controller
 }
 
-func (this *RegionController) Region_Info() {
+// RegionInfo RegionInfo
+func (c *RegionController) RegionInfo() {
 
-	regionId := this.GetString("regionId")
-	intregionid := utils.String2Int(regionId)
+	regionID := c.GetString("regionId")
+	intRegionID := utils.String2Int(regionID)
 
 	o := orm.NewOrm()
-	regiontable := new(models.SysCity)
+	regionTable := new(models.SysCity)
 	var region models.SysCity
-	o.QueryTable(regiontable).Filter("city_id", intregionid).One(&region)
+	o.QueryTable(regionTable).Filter("city_id", intRegionID).One(&region)
 
-	utils.ReturnHTTPSuccess(&this.Controller, region)
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, region)
+	c.ServeJSON()
 
 }
 
-func (this *RegionController) Region_List() {
+// RegionList RegionList
+func (c *RegionController) RegionList() {
 
-	parentId := this.GetString("parentId")
-	intparentid := utils.String2Int(parentId)
+	parentID := c.GetString("parentId")
+	intParentID := utils.String2Int(parentID)
 
 	o := orm.NewOrm()
-	regiontable := new(models.SysCity)
+	regionTable := new(models.SysCity)
 	var regions []models.SysCity
-	o.QueryTable(regiontable).Filter("province_id", intparentid).All(&regions)
+	o.QueryTable(regionTable).Filter("province_id", intParentID).All(&regions)
 
-	utils.ReturnHTTPSuccess(&this.Controller, regions)
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, regions)
+	c.ServeJSON()
 }

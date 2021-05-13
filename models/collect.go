@@ -4,19 +4,19 @@ import (
 	"github.com/astaxie/beego/orm"
 )
 
-func IsUserHasCollect(userId int, favType string, valueId int) int {
+// IsUserHasCollect IsUserHasCollect
+func IsUserHasCollect(userID int, favType string, valueID int) int {
 
 	o := orm.NewOrm()
 
 	var collect NsMemberFavorites
-	collecttable := new(NsMemberFavorites)
+	collectTable := new(NsMemberFavorites)
 
-	err := o.QueryTable(collecttable).Filter("fav_type", favType).Filter("fav_id", valueId).Filter("uid", userId).One(&collect)
+	err := o.QueryTable(collectTable).Filter("fav_type", favType).Filter("fav_id", valueID).Filter("uid", userID).One(&collect)
 
 	if err == nil {
 		return 1
-	} else {
-		return 0
 	}
+	return 0
 
 }

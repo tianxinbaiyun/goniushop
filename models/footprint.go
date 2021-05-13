@@ -1,10 +1,11 @@
 package models
 
-func AddFootprint(userId, goodsId int) {
+// AddFootprint AddFootprint
+func AddFootprint(userID, goodsID int) {
 
 	// o := orm.NewOrm()
-	// if userId > 0 && goodsId > 0 {
-	// 	footprintval := NideshopFootprint{GoodsId: goodsId, UserId: userId, AddTime: utils.GetTimestamp()}
-	// 	o.Insert(&footprintval)
+	// if userID > 0 && goodsID > 0 {
+	// 	footPrintVal := NiuShopFootPrint{GoodsID: goodsID, UserID: userID, AddTime: utils.GetTimestamp()}
+	// 	o.Insert(&footPrintVal)
 	// }
 }

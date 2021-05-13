@@ -11,16 +11,19 @@ import (
 	"github.com/tianxinbaiyun/goniushop/utils"
 )
 
+// GoodsController GoodsController
 type GoodsController struct {
 	beego.Controller
 }
 
-type SkuRtnJson struct {
+// SkuRtnJSON SkuRtnJSON
+type SkuRtnJSON struct {
 	ProductList []models.NsGoodsSku `json:"productList"`
 }
 
-type DetailRtnJson struct {
-	SkuRtnJson
+// DetailRtnJSON DetailRtnJSON
+type DetailRtnJSON struct {
+	SkuRtnJSON
 	Goods     models.NsGoods           `json:"info"`
 	Galleries []models.SysAlbumPicture `json:"gallery"`
 	Attribute []Attribute              `json:"attribute"`
@@ -30,70 +33,81 @@ type DetailRtnJson struct {
 	Brand          models.NsGoodsBrand `json:"brand"`
 }
 
-type CategoryRtnJson struct {
+// CategoryRtnJSON CategoryRtnJSON
+type CategoryRtnJSON struct {
 	CurCategory     models.NsGoodsCategory   `json:"currentCategory"`
 	ParentCategory  models.NsGoodsCategory   `json:"parentCategory"`
 	BrotherCategory []models.NsGoodsCategory `json:"brotherCategory"`
 }
 
+// Attribute Attribute
 type Attribute struct {
 	Value         string `json:"value"`
 	AttrValueName string `json:"attr_value_name"`
 }
 
+// CommentUser CommentUser
 type CommentUser struct {
 	NickName string `json:"nick_name"`
 	UserName string `json:"user_name"`
 	Avatar   string `json:"avatar"`
 }
 
+// Comment Comment
 type Comment struct {
 	Count int64                  `json:"count"`
 	Data  models.NsGoodsEvaluate `json:"data"`
 }
 
+// FilterCategory FilterCategory
 type FilterCategory struct {
-	Id      int64  `json:"id"`
+	ID      int64  `json:"id"`
 	Name    string `json:"name"`
 	Checked bool   `json:"checked"`
 }
 
-type ListRtnJson struct {
+// ListRtnJSON ListRtnJSON
+type ListRtnJSON struct {
 	utils.PageData
 	FilterCategories []FilterCategory `json:"filterCategory"`
 	GoodsList        []orm.Params     `json:"goodsList"`
 }
 
+// Banner Banner
 type Banner struct {
-	Url     string `json:"url"`
-	Name    string `json:"name"`
-	Img_url string `json:"imgurl"`
+	URL    string `json:"url"`
+	Name   string `json:"name"`
+	ImgURL string `json:"imgurl"`
 }
 
-type NewRtnJson struct {
+// NewRtnJSON NewRtnJSON
+type NewRtnJSON struct {
 	BannerInfo Banner `json:"bannerinfo"`
 }
 
-type HotRtnJson struct {
+// HotRtnJSON HotRtnJSON
+type HotRtnJSON struct {
 	BannerInfo Banner `json:"bannerinfo"`
 }
 
-type CountRtnJson struct {
+// CountRtnJSON CountRtnJSON
+type CountRtnJSON struct {
 	GoodsCount int64 `json:"goodsCount"`
 }
 
-func updateJsonKeysGoods(vals []orm.Params) {
+// updateJSONKeysGoods updateJSONKeysGoods
+func updateJSONKeysGoods(values []orm.Params) {
 
-	for _, val := range vals {
+	for _, val := range values {
 		for k, v := range val {
 			switch k {
-			case "Id":
+			case "ID":
 				delete(val, k)
 				val["id"] = v
 			case "Name":
 				delete(val, k)
 				val["name"] = v
-			case "ListPicUrl":
+			case "ListPicURL":
 				delete(val, k)
 				val["list_pic_url"] = v
 			case "RetailPrice":
@@ -104,118 +118,125 @@ func updateJsonKeysGoods(vals []orm.Params) {
 	}
 }
 
-func (this *GoodsController) Goods_Index() {
+// GoodsIndex GoodsIndex
+func (c *GoodsController) GoodsIndex() {
 	o := orm.NewOrm()
 
 	var goods []models.NsGoods
 	good := new(models.NsGoods)
-	o.QueryTable(good).All(&goods)
+	_, _ = o.QueryTable(good).All(&goods)
 
-	utils.ReturnHTTPSuccess(&this.Controller, goods)
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, goods)
+	c.ServeJSON()
 }
 
-func (this *GoodsController) Goods_Sku() {
+// GoodsSku GoodsSku
+func (c *GoodsController) GoodsSku() {
 
-	goodsId := this.GetString("id")
-	goodsId_int := utils.String2Int(goodsId)
+	goodsID := c.GetString("id")
+	goodsIDInt := utils.String2Int(goodsID)
 
-	// plist := models.GetProductList(goodsId_int)
-	plist := models.GetGoodSku(goodsId_int)
+	// plist := models.GetProductList(goodsIDInt)
+	plist := models.GetGoodSku(goodsIDInt)
 
-	utils.ReturnHTTPSuccess(&this.Controller, SkuRtnJson{ProductList: plist})
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, SkuRtnJSON{ProductList: plist})
+	c.ServeJSON()
 }
 
-func (this *GoodsController) Goods_Detail() {
-	goodsId := this.GetString("id")
-	intGoodsId := utils.String2Int(goodsId)
+// GoodsDetail GoodsDetail
+func (c *GoodsController) GoodsDetail() {
+	goodsID := c.GetString("id")
+	intGoodsID := utils.String2Int(goodsID)
 
 	o := orm.NewOrm()
 
-	var goodone models.NsGoods
+	var goodOne models.NsGoods
 	good := new(models.NsGoods)
-	o.QueryTable(good).Filter("goods_id", intGoodsId).One(&goodone)
+	_ = o.QueryTable(good).Filter("goods_id", intGoodsID).One(&goodOne)
 
 	var galleries []models.SysAlbumPicture
-	gallerie := new(models.SysAlbumPicture)
-	imgIds := strings.Split(goodone.ImgIdArray, ",")
-	o.QueryTable(gallerie).Filter("pic_id__in", imgIds).Limit(4).All(&galleries)
+	gallery := new(models.SysAlbumPicture)
+	imgIDs := strings.Split(goodOne.ImgIDArray, ",")
+	_, _ = o.QueryTable(gallery).Filter("pic_id__in", imgIDs).Limit(4).All(&galleries)
 
 	qb, _ := orm.NewQueryBuilder("mysql")
 	var attributes []Attribute
 	qb.Select("a.value", "a.attr_value_name").
 		From(" ns_attribute_value a").
 		InnerJoin("ns_goods_attribute ga").On("ga.attr_value_id = a.attr_value_id").
-		Where("ga.goods_id =" + goodsId).GroupBy("a.attr_value_id").Asc()
+		Where("ga.goods_id =" + goodsID).GroupBy("a.attr_value_id").Asc()
 	sql := qb.String()
-	o.Raw(sql).QueryRows(&attributes)
+	_, _ = o.Raw(sql).QueryRows(&attributes)
 
-	var brandone models.NsGoodsBrand
+	var brandOne models.NsGoodsBrand
 	brand := new(models.NsGoodsBrand)
-	o.QueryTable(brand).Filter("brand_id", goodone.BrandId).One(&brandone)
+	_ = o.QueryTable(brand).Filter("brand_id", goodOne.BrandID).One(&brandOne)
 
 	comment := new(models.NsGoodsEvaluate)
-	commentCount, _ := o.QueryTable(comment).Filter("goods_id", intGoodsId).Filter("is_show", 1).Count()
-	var hotcommentone models.NsGoodsEvaluate
-	o.QueryTable(comment).Filter("goods_id", intGoodsId).Filter("is_show", 1).One(&hotcommentone)
-	commentval := Comment{Count: commentCount, Data: hotcommentone}
-	loginuserid := getLoginUserId()
+	commentCount, _ := o.QueryTable(comment).Filter("goods_id", intGoodsID).Filter("is_show", 1).Count()
+	var hotCommentOne models.NsGoodsEvaluate
+	_ = o.QueryTable(comment).Filter("goods_id", intGoodsID).Filter("is_show", 1).One(&hotCommentOne)
+	commentVal := Comment{Count: commentCount, Data: hotCommentOne}
+	loginUserID := getLoginUserID()
 
-	userhascollect := models.IsUserHasCollect(loginuserid, `goods`, intGoodsId)
+	userHasCollect := models.IsUserHasCollect(loginUserID, `goods`, intGoodsID)
 
-	// models.AddFootprint(loginuserid, intGoodsId)
+	// models.AddFootprint(loginUserID, intGoodsID)
 
-	plist := models.GetGoodSku(intGoodsId)
+	plist := models.GetGoodSku(intGoodsID)
 
-	utils.ReturnHTTPSuccess(&this.Controller, DetailRtnJson{Goods: goodone, Galleries: galleries, Attribute: attributes,
-		UserHasCollect: userhascollect, Comment: commentval, Brand: *brand,
-		SkuRtnJson: SkuRtnJson{ProductList: plist}})
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, DetailRtnJSON{Goods: goodOne, Galleries: galleries, Attribute: attributes,
+		UserHasCollect: userHasCollect, Comment: commentVal, Brand: *brand,
+		SkuRtnJSON: SkuRtnJSON{ProductList: plist}})
+	c.ServeJSON()
 }
-func (this *GoodsController) Goods_Category() {
 
-	goodsId := this.GetString("id")
-	intgoogsid := utils.String2Int(goodsId)
+// GoodsCategory GoodsCategory
+func (c *GoodsController) GoodsCategory() {
+
+	goodsID := c.GetString("id")
+	intGoodsID := utils.String2Int(goodsID)
 
 	o := orm.NewOrm()
-	var curcategory models.NsGoodsCategory
-	var parentcategory models.NsGoodsCategory
-	var brothercategory []models.NsGoodsCategory
+	var curCategory models.NsGoodsCategory
+	var parentCategory models.NsGoodsCategory
+	var brotherCategory []models.NsGoodsCategory
 
 	category := new(models.NsGoodsCategory)
 
-	o.QueryTable(category).Filter("id", intgoogsid).One(&curcategory)
-	o.QueryTable(category).Filter("id", curcategory.ParentId).One(&parentcategory)
-	o.QueryTable(category).Filter("pid", curcategory.ParentId).All(&brothercategory)
+	_ = o.QueryTable(category).Filter("id", intGoodsID).One(&curCategory)
+	_ = o.QueryTable(category).Filter("id", curCategory.ParentID).One(&parentCategory)
+	_, _ = o.QueryTable(category).Filter("pid", curCategory.ParentID).All(&brotherCategory)
 
-	utils.ReturnHTTPSuccess(&this.Controller, CategoryRtnJson{CurCategory: curcategory,
-		ParentCategory: parentcategory, BrotherCategory: brothercategory})
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, CategoryRtnJSON{CurCategory: curCategory,
+		ParentCategory: parentCategory, BrotherCategory: brotherCategory})
+	c.ServeJSON()
 }
-func (this *GoodsController) Goods_List() {
-	categoryId := this.GetString("categoryId")
-	brandId := this.GetString("brandId")
-	keyword := this.GetString("keyword")
-	isNew := this.GetString("isNew")
-	isHot := this.GetString("isHot")
-	page := this.GetString("page")
-	size := this.GetString("size")
-	sort := this.GetString("sort")
-	order := this.GetString("order")
 
-	var intsize int = 10
+// GoodsList GoodsList
+func (c *GoodsController) GoodsList() {
+	categoryID := c.GetString("categoryID")
+	brandID := c.GetString("brandId")
+	keyword := c.GetString("keyword")
+	isNew := c.GetString("isNew")
+	isHot := c.GetString("isHot")
+	page := c.GetString("page")
+	size := c.GetString("size")
+	sort := c.GetString("sort")
+	order := c.GetString("order")
+
+	var intSize = 10
 	if size != "" {
-		intsize = utils.String2Int(size)
+		intSize = utils.String2Int(size)
 	}
 
-	var intpage int = 1
+	var intPage = 1
 	if page != "" {
-		intpage = utils.String2Int(page)
+		intPage = utils.String2Int(page)
 	}
 
 	o := orm.NewOrm()
-	var categoryids []orm.Params
+	var categoryIDs []orm.Params
 	var list []orm.Params
 
 	//构建查询语句
@@ -225,92 +246,93 @@ func (this *GoodsController) Goods_List() {
 		LeftJoin("sys_album_picture p").
 		On("g.picture = p.pic_id").
 		Where("g.state=1")
-	goodstable := new(models.NsGoods)
-	rs := o.QueryTable(goodstable)
+	goodsTable := new(models.NsGoods)
+	rs := o.QueryTable(goodsTable)
 
 	//参数处理
 	if isNew != "" {
-		qb.And(fmt.Sprintf("is_new=%v", isNew))
+		qb.And(fmt.Sprintf("is_new=%s", isNew))
 		rs = rs.Filter("is_new", isNew)
 	}
 	if isHot != "" {
-		qb.And(fmt.Sprintf("is_hot=%v", isHot))
+		qb.And(fmt.Sprintf("is_hot=%s", isHot))
 		rs = rs.Filter("is_hot", isHot)
 	}
 	keyword, _ = url.QueryUnescape(keyword)
 	if keyword != "" {
-		qb.And(fmt.Sprintf("goods_name like '{%v%}'", keyword))
+		qb.And(fmt.Sprintf("goods_name like '{%s}'", "%"+keyword+"%"))
 		rs = rs.Filter("goods_name__icontains", keyword)
 	}
-	if brandId != "" {
-		qb.And(fmt.Sprintf("brand_id = %v", brandId))
-		rs = rs.Filter("brand_id", brandId)
+	if brandID != "" {
+		qb.And(fmt.Sprintf("brand_id = %v", brandID))
+		rs = rs.Filter("brand_id", brandID)
 	}
 
 	//分类处理
 
-	rs.Limit(10000).Values(&categoryids, "category_id")
-	categoryintids := utils.ExactMapValues2Int64Array(categoryids, "CategoryId")
-	var filterCategories = []FilterCategory{FilterCategory{Id: 0, Name: "全部", Checked: false}}
-	if len(categoryintids) > 0 {
-		var parentids []orm.Params
-		categorytable := new(models.NsGoodsCategory)
-		o.QueryTable(categorytable).Filter("category_id__in", categoryintids).Limit(10000).Values(&parentids, "pid")
-		parentintids := utils.ExactMapValues2Int64Array(parentids, "ParentId")
+	_, _ = rs.Limit(10000).Values(&categoryIDs, "category_id")
+	categoryIntIDs := utils.ExactMapValues2Int64Array(categoryIDs, "CategoryID")
+	var filterCategories = []FilterCategory{{ID: 0, Name: "全部", Checked: false}}
+	if len(categoryIntIDs) > 0 {
+		var parentIDs []orm.Params
+		categoryTable := new(models.NsGoodsCategory)
+		_, _ = o.QueryTable(categoryTable).Filter("category_id__in", categoryIntIDs).Limit(10000).Values(&parentIDs, "pid")
+		parentIntIDs := utils.ExactMapValues2Int64Array(parentIDs, "ParentID")
 
-		var parentcategories []orm.Params
-		o.QueryTable(categorytable).Filter("category_id__in", parentintids).OrderBy("sort").Values(&parentcategories, "category_id", "category_name")
+		var parentCategories []orm.Params
+		_, _ = o.QueryTable(categoryTable).Filter("category_id__in", parentIntIDs).OrderBy("sort").Values(&parentCategories, "category_id", "category_name")
 
-		for _, value := range parentcategories {
+		for _, value := range parentCategories {
 			id := value["Id"].(int64)
-			checked := (categoryId == "" && id == 0)
+			checked := categoryID == "" && id == 0
 
-			filterCategories = append(filterCategories, FilterCategory{Id: id, Name: value["Name"].(string), Checked: checked})
+			filterCategories = append(filterCategories, FilterCategory{ID: id, Name: value["Name"].(string), Checked: checked})
 		}
 	}
 
 	//商品查询
-	if categoryId != "" {
-		intcategoryId := utils.String2Int(categoryId)
-		if intcategoryId >= 0 {
-			qb.And(fmt.Sprintf("category_id_1 = %v or category_id_2=%v or category_id_3 = %v", intcategoryId, intcategoryId, intcategoryId))
+	if categoryID != "" {
+		intCategoryID := utils.String2Int(categoryID)
+		if intCategoryID >= 0 {
+			qb.And(fmt.Sprintf("category_id_1 = %v or category_id_2=%v or category_id_3 = %v", intCategoryID, intCategoryID, intCategoryID))
 		}
 
 	}
 	if sort == "price" {
-		orderstr := "price"
+		orderStr := "price"
 		if order == "desc" {
-			orderstr = "-" + orderstr
+			orderStr = "-" + orderStr
 		}
-		qb.OrderBy(orderstr)
+		qb.OrderBy(orderStr)
 	} else {
 		qb.OrderBy("goods_id")
 	}
 	sql := qb.String()
-	o.Raw(sql).Values(&list)
+	_, _ = o.Raw(sql).Values(&list)
 	// logs.Debug("list success,sql:%v,list:%v", sql, list)
 
-	pageData := utils.GetPageData(list, intpage, intsize)
+	pageData := utils.GetPageData(list, intPage, intSize)
 	fmt.Println(pageData)
 
-	utils.ReturnHTTPSuccess(&this.Controller, ListRtnJson{PageData: pageData, FilterCategories: filterCategories, GoodsList: pageData.Data.([]orm.Params)})
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, ListRtnJSON{PageData: pageData, FilterCategories: filterCategories, GoodsList: pageData.Data.([]orm.Params)})
+	c.ServeJSON()
 }
 
-func (this *GoodsController) Goods_Filter() {
+// GoodsFilter GoodsFilter
+func (c *GoodsController) GoodsFilter() {
 
-	categoryId := this.GetString("categoryId")
-	keyword := this.GetString("keyword")
-	isNew := this.GetString("isNew")
-	isHot := this.GetString("isHot")
+	categoryID := c.GetString("categoryID")
+	keyword := c.GetString("keyword")
+	isNew := c.GetString("isNew")
+	isHot := c.GetString("isHot")
 
 	o := orm.NewOrm()
-	goodstable := new(models.NsGoods)
-	rs := o.QueryTable(goodstable)
+	goodsTable := new(models.NsGoods)
+	rs := o.QueryTable(goodsTable)
 
-	if categoryId != "" {
-		intcategoryId := utils.String2Int(categoryId)
-		rs = rs.Filter("category_id__in", models.GetChildCategoryId(intcategoryId))
+	if categoryID != "" {
+		intCategoryID := utils.String2Int(categoryID)
+		rs = rs.Filter("category_id__in", models.GetChildCategoryID(intCategoryID))
 	}
 	if isNew != "" {
 		rs = rs.Filter("is_new", isNew)
@@ -322,60 +344,63 @@ func (this *GoodsController) Goods_Filter() {
 		rs = rs.Filter("icontains", keyword)
 	}
 
-	var filterCategories = []FilterCategory{FilterCategory{Id: 0, Name: "全部"}}
+	var filterCategories = []FilterCategory{{ID: 0, Name: "全部"}}
 
-	var categoryids []orm.Params
-	rs.Limit(10000).Values(&categoryids, "category_id")
-	categoryintids := utils.ExactMapValues2Int64Array(categoryids, "Id")
+	var categoryIDs []orm.Params
+	_, _ = rs.Limit(10000).Values(&categoryIDs, "category_id")
+	categoryIntIDs := utils.ExactMapValues2Int64Array(categoryIDs, "Id")
 
-	if len(categoryintids) > 0 {
+	if len(categoryIntIDs) > 0 {
 
-		var parentids []orm.Params
-		categorytable := new(models.NsGoodsCategory)
-		o.QueryTable(categorytable).Filter("id__in", categoryintids).Limit(10000).Values(&parentids, "parent_id")
-		parentintids := utils.ExactMapValues2Int64Array(parentids, "ParentId")
+		var parentIDs []orm.Params
+		categoryTable := new(models.NsGoodsCategory)
+		_, _ = o.QueryTable(categoryTable).Filter("id__in", categoryIntIDs).Limit(10000).Values(&parentIDs, "parent_id")
+		parentIntIDs := utils.ExactMapValues2Int64Array(parentIDs, "ParentID")
 
-		var parentcategories []orm.Params
-		rs.OrderBy("sort_order").Filter("id__in", parentintids).Values(&parentcategories, "id", "name")
+		var parentCategories []orm.Params
+		_, _ = rs.OrderBy("sort_order").Filter("id__in", parentIntIDs).Values(&parentCategories, "id", "name")
 
-		for _, value := range parentcategories {
+		for _, value := range parentCategories {
 			id := value["id"].(int64)
-			filterCategories = append(filterCategories, FilterCategory{Id: id, Name: value["name"].(string)})
+			filterCategories = append(filterCategories, FilterCategory{ID: id, Name: value["name"].(string)})
 		}
 	}
 
-	utils.ReturnHTTPSuccess(&this.Controller, filterCategories)
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, filterCategories)
+	c.ServeJSON()
 }
 
-func (this *GoodsController) Goods_New() {
+// GoodsNew GoodsNew
+func (c *GoodsController) GoodsNew() {
 
 	o := orm.NewOrm()
 	var banners []models.NsPlatformAdv
 	ad := new(models.NsPlatformAdv)
-	o.QueryTable(ad).Filter("ap_id", 6667).All(&banners)
-	utils.ReturnHTTPSuccess(&this.Controller, banners)
-	this.ServeJSON()
+	_, _ = o.QueryTable(ad).Filter("ap_id", 6667).All(&banners)
+	utils.ReturnHTTPSuccess(&c.Controller, banners)
+	c.ServeJSON()
 
 }
 
-func (this *GoodsController) Goods_Hot() {
+// GoodsHot GoodsHot
+func (c *GoodsController) GoodsHot() {
 
 	o := orm.NewOrm()
 	var banners []models.NsPlatformAdv
 	ad := new(models.NsPlatformAdv)
-	o.QueryTable(ad).Filter("ap_id", 1165).All(&banners)
-	utils.ReturnHTTPSuccess(&this.Controller, banners)
-	this.ServeJSON()
+	_, _ = o.QueryTable(ad).Filter("ap_id", 1165).All(&banners)
+	utils.ReturnHTTPSuccess(&c.Controller, banners)
+	c.ServeJSON()
 }
 
-func (this *GoodsController) Goods_Count() {
+// GoodsCount GoodsCount
+func (c *GoodsController) GoodsCount() {
 
 	o := orm.NewOrm()
-	goodstable := new(models.NsGoods)
+	goodsTable := new(models.NsGoods)
 
-	count, _ := o.QueryTable(goodstable).Filter("state", 1).Count()
+	count, _ := o.QueryTable(goodsTable).Filter("state", 1).Count()
 
-	utils.ReturnHTTPSuccess(&this.Controller, CountRtnJson{GoodsCount: count})
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, CountRtnJSON{GoodsCount: count})
+	c.ServeJSON()
 }

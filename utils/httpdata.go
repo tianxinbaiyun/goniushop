@@ -6,13 +6,15 @@ import (
 	"github.com/astaxie/beego"
 )
 
+// HTTPData HTTPData
 type HTTPData struct {
 	ErrNo  int         `json:"errno"`
 	ErrMsg string      `json:"errmsg"`
 	Data   interface{} `json:"data"`
 }
 
-func ReturnHTTPSuccess(this *beego.Controller, val interface{}) {
+// ReturnHTTPSuccess ReturnHTTPSuccess
+func ReturnHTTPSuccess(c *beego.Controller, val interface{}) {
 
 	rtndata := HTTPData{
 		ErrNo:  0,
@@ -22,12 +24,14 @@ func ReturnHTTPSuccess(this *beego.Controller, val interface{}) {
 
 	data, err := json.Marshal(rtndata)
 	if err != nil {
-		this.Data["json"] = err
+		c.Data["json"] = err
 	} else {
-		this.Data["json"] = json.RawMessage(string(data))
+		c.Data["json"] = json.RawMessage(string(data))
 	}
 }
-func ReturnHTTPError(this *beego.Controller, errno int, errmsg string) {
+
+// ReturnHTTPError ReturnHTTPError
+func ReturnHTTPError(c *beego.Controller, errno int, errmsg string) {
 
 	rtndata := HTTPData{
 		ErrNo:  errno,
@@ -37,12 +41,14 @@ func ReturnHTTPError(this *beego.Controller, errno int, errmsg string) {
 
 	data, err := json.Marshal(rtndata)
 	if err != nil {
-		this.Data["json"] = err
+		c.Data["json"] = err
 	} else {
-		this.Data["json"] = json.RawMessage(string(data))
+		c.Data["json"] = json.RawMessage(string(data))
 	}
 }
-func GetHTTPRtnJsonData(errno int, errmsg string) interface{} {
+
+// GetHTTPRtnJSONData GetHTTPRtnJSONData
+func GetHTTPRtnJSONData(errno int, errmsg string) interface{} {
 
 	rtndata := HTTPData{
 		ErrNo:  errno,

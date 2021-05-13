@@ -11,18 +11,23 @@ import (
 	"github.com/tianxinbaiyun/goniushop/utils"
 )
 
-var key = []byte("adfadf!@#2")
+// 变量定义
+var (
+	key         = []byte("adfadf!@#2")
+	expireTime  = 20
+	LoginUserID string
+)
 
-var expireTime = 20
-
+// CustomClaims CustomClaims
 type CustomClaims struct {
 	UserID string `json:"userid"`
 	jwt.StandardClaims
 }
 
-func GetUserID(tokenstr string) string {
+// GetUserID GetUserID
+func GetUserID(tokenStr string) string {
 
-	token := Parse(tokenstr)
+	token := Parse(tokenStr)
 	if token == nil {
 		return ""
 	}
@@ -32,12 +37,15 @@ func GetUserID(tokenstr string) string {
 	return ""
 }
 
-func Parse(tokenstr string) *jwt.Token {
+// Parse Parse
+func Parse(tokenStr string) *jwt.Token {
 
-	token, err := jwt.ParseWithClaims(tokenstr, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(key), nil
 	})
-
+	if err != nil {
+		return nil
+	}
 	if token.Valid {
 		return token
 	} else if ve, ok := err.(*jwt.ValidationError); ok {
@@ -56,6 +64,7 @@ func Parse(tokenstr string) *jwt.Token {
 
 }
 
+// Create Create
 func Create(userid string) string {
 
 	claims := CustomClaims{
@@ -67,28 +76,29 @@ func Create(userid string) string {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenstr, err := token.SignedString(key)
+	tokenStr, err := token.SignedString(key)
 
 	if err == nil {
-		return tokenstr
+		return tokenStr
 	}
 	return ""
 }
 
-func Verify(tokenstr string) bool {
+// Verify Verify
+func Verify(tokenStr string) bool {
 
-	token := Parse(tokenstr)
+	token := Parse(tokenStr)
 	return token != nil
 
 }
 
+// getControllerAndAction getControllerAndAction
 func getControllerAndAction(rawvalue string) (controller, action string) {
-	vals := strings.Split(rawvalue, "/")
-	return vals[2], vals[2] + "/" + vals[3]
+	values := strings.Split(rawvalue, "/")
+	return values[2], values[2] + "/" + values[3]
 }
 
-var LoginUserId string
-
+// FilterFunc FilterFunc
 func FilterFunc(ctx *context.Context) {
 
 	controller, action := getControllerAndAction(ctx.Request.RequestURI)
@@ -99,19 +109,19 @@ func FilterFunc(ctx *context.Context) {
 	}
 
 	if token == "" {
-		data := utils.GetHTTPRtnJsonData(401, "need relogin")
+		data := utils.GetHTTPRtnJSONData(401, "need relogin")
 		ctx.Output.JSON(data, true, false)
 		ctx.Redirect(200, "/")
 		return
 	}
-	LoginUserId = GetUserID(token)
+	LoginUserID = GetUserID(token)
 
-	publiccontrollerlist := beego.AppConfig.String("controller::publicController")
-	publicactionlist := beego.AppConfig.String("action::publicAction")
+	publicControllerList := beego.AppConfig.String("controller::publicController")
+	publicactionList := beego.AppConfig.String("action::publicAction")
 
-	if !strings.Contains(publiccontrollerlist, controller) && !strings.Contains(publicactionlist, action) {
-		if LoginUserId == "" {
-			data := utils.GetHTTPRtnJsonData(401, "need relogin")
+	if !strings.Contains(publicControllerList, controller) && !strings.Contains(publicactionList, action) {
+		if LoginUserID == "" {
+			data := utils.GetHTTPRtnJSONData(401, "need relogin")
 			ctx.Output.JSON(data, true, false)
 			ctx.Redirect(200, "/")
 			//http.Redirect(ctx.ResponseWriter, ctx.Request, "/", http.StatusMovedPermanently)

@@ -4,43 +4,49 @@ import (
 	"github.com/astaxie/beego/orm"
 )
 
-func GetAreaName(regionid int) string {
+// GetAreaName GetAreaName
+func GetAreaName(regionID int) string {
 
 	o := orm.NewOrm()
-	regiontable := new(SysArea)
+	regionTable := new(SysArea)
 	var region SysArea
-	o.QueryTable(regiontable).Filter("area_id", regionid).One(&region)
+	o.QueryTable(regionTable).Filter("area_id", regionID).One(&region)
 
 	return region.AreaName
 
 }
 
-func GetProvinceName(regionid int) string {
+// GetProvinceName GetProvinceName
+func GetProvinceName(regionID int) string {
 
 	o := orm.NewOrm()
-	regiontable := new(SysProvince)
+	regionTable := new(SysProvince)
 	var region SysProvince
-	o.QueryTable(regiontable).Filter("province_id", regionid).One(&region)
+	o.QueryTable(regionTable).Filter("province_id", regionID).One(&region)
 
 	return region.ProvinceName
 
 }
-func GetCityName(regionid int) string {
+
+// GetCityName GetCityName
+func GetCityName(regionID int) string {
 
 	o := orm.NewOrm()
-	regiontable := new(SysCity)
+	regionTable := new(SysCity)
 	var region SysCity
-	o.QueryTable(regiontable).Filter("city_id", regionid).One(&region)
+	o.QueryTable(regionTable).Filter("city_id", regionID).One(&region)
 
 	return region.CityName
 
 }
-func GetDistrictName(regionid int) string {
+
+// GetDistrictName GetDistrictName
+func GetDistrictName(regionID int) string {
 
 	o := orm.NewOrm()
-	regiontable := new(SysDistrict)
+	regionTable := new(SysDistrict)
 	var region SysDistrict
-	o.QueryTable(regiontable).Filter("district_id", regionid).One(&region)
+	o.QueryTable(regionTable).Filter("district_id", regionID).One(&region)
 
 	return region.DistrictName
 

@@ -12,25 +12,27 @@ import (
 	"github.com/tianxinbaiyun/goniushop/utils"
 )
 
+// OrderController OrderController
 type OrderController struct {
 	beego.Controller
 }
 
-//It may need to be refactored.
+// GetOrderPageData It may need to be refactored.
 func GetOrderPageData(rawData []models.NsOrder, page int, size int) utils.PageData {
 
 	count := len(rawData)
-	totalpages := (count + size - 1) / size
-	var pagedata []models.NsOrder
+	totalPages := (count + size - 1) / size
+	var pageData []models.NsOrder
 
 	for idx := (page - 1) * size; idx < page*size && idx < count; idx++ {
-		pagedata = append(pagedata, rawData[idx])
+		pageData = append(pageData, rawData[idx])
 	}
 
-	return utils.PageData{NumsPerPage: size, CurrentPage: page, Count: count, TotalPages: totalpages, Data: pagedata}
+	return utils.PageData{NumsPerPage: size, CurrentPage: page, Count: count, TotalPages: totalPages, Data: pageData}
 }
 
-type OrderListRtnJson struct {
+// OrderListRtnJSON OrderListRtnJSON
+type OrderListRtnJSON struct {
 	models.NsOrder
 	GoodsList       []models.NsOrderGoods    `json:"goodList"`
 	GoodsCount      int                      `json:"goodsCount"`
@@ -38,10 +40,11 @@ type OrderListRtnJson struct {
 	HandOption      models.OrderHandleOption `json:"handleOption"`
 }
 
-func (this *OrderController) Order_List() {
+// OrderList OrderList
+func (c *OrderController) OrderList() {
 	//请求参数
-	page := utils.String2Int(this.GetString("page"))
-	pageSize := utils.String2Int(this.GetString("pageSize"))
+	page := utils.String2Int(c.GetString("page"))
+	pageSize := utils.String2Int(c.GetString("pageSize"))
 	if page <= 0 {
 		page = 1
 	}
@@ -49,36 +52,37 @@ func (this *OrderController) Order_List() {
 		pageSize = 10
 	}
 	o := orm.NewOrm()
-	ordertable := new(models.NsOrder)
+	orderTable := new(models.NsOrder)
 	var orders []models.NsOrder
-	o.QueryTable(ordertable).Filter("buyer_id", getLoginUserId()).All(&orders)
+	_, _ = o.QueryTable(orderTable).Filter("buyer_id", getLoginUserID()).All(&orders)
 
-	firstpagedorders := GetOrderPageData(orders, page, pageSize)
+	firstPageOrders := GetOrderPageData(orders, page, pageSize)
 
-	var rtnorderlist []OrderListRtnJson
-	ordergoodstable := new(models.NsOrderGoods)
-	var ordergoods []models.NsOrderGoods
-	qsordergoods := o.QueryTable(ordergoodstable)
-	for _, val := range firstpagedorders.Data.([]models.NsOrder) {
-		qsordergoods.Filter("order_id", val.Id).All(&ordergoods)
-		var goodscount int
-		for _, val := range ordergoods {
-			goodscount += val.Number
+	var rtnOrderList []OrderListRtnJSON
+	orderGoodsTable := new(models.NsOrderGoods)
+	var orderGoods []models.NsOrderGoods
+	qsOrderGoods := o.QueryTable(orderGoodsTable)
+	for _, val := range firstPageOrders.Data.([]models.NsOrder) {
+		_, _ = qsOrderGoods.Filter("order_id", val.ID).All(&orderGoods)
+		var goodsCount int
+		for _, val := range orderGoods {
+			goodsCount += val.Number
 		}
-		orderstatustext := models.GetOrderStatusText(val.Id)
-		orderhandoption := models.GetOrderHandleOption(val.Id)
-		var orderlistrtn OrderListRtnJson = OrderListRtnJson{val, ordergoods, goodscount, orderstatustext, orderhandoption}
+		orderStatusText := models.GetOrderStatusText(val.ID)
+		orderHandOption := models.GetOrderHandleOption(val.ID)
+		var orderListRtn = OrderListRtnJSON{val, orderGoods, goodsCount, orderStatusText, orderHandOption}
 
-		rtnorderlist = append(rtnorderlist, orderlistrtn)
+		rtnOrderList = append(rtnOrderList, orderListRtn)
 
 	}
 
-	firstpagedorders.Data = rtnorderlist
+	firstPageOrders.Data = rtnOrderList
 
-	utils.ReturnHTTPSuccess(&this.Controller, firstpagedorders)
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, firstPageOrders)
+	c.ServeJSON()
 }
 
+// OrderInfo OrderInfo
 type OrderInfo struct {
 	models.NsOrder
 	ProvinceName        string                  `json:"province_name"`
@@ -91,155 +95,159 @@ type OrderInfo struct {
 	FormatFinalPlayTime string                  `json:"final_pay_time"`
 }
 
-type OrderDetailRtnJson struct {
+// OrderDetailRtnJSON OrderDetailRtnJSON
+type OrderDetailRtnJSON struct {
 	OrderInfo    OrderInfo                `json:"orderInfo"`
 	OrderGoods   []models.NsOrderGoods    `json:"orderGoods"`
 	HandleOption models.OrderHandleOption `json:"handleOption"`
 }
 
-func (this *OrderController) Order_Detail() {
+// OrderDetail OrderDetail
+func (c *OrderController) OrderDetail() {
 	//请求参数
-	orderId := this.GetString("orderId")
-	intorderId := utils.String2Int(orderId)
+	orderID := c.GetString("orderId")
+	intOrderID := utils.String2Int(orderID)
 
 	//错误返回
 	var err error
 	defer func() {
 		if err != nil {
-			logs.Debug("this order id[%v] has a error ,err:%v", orderId, err)
+			logs.Debug("this order id[%v] has a error ,err:%v", orderID, err)
 		}
-		this.ServeJSON()
+		c.ServeJSON()
 		return
 	}()
 	o := orm.NewOrm()
-	ordertable := new(models.NsOrder)
+	orderTable := new(models.NsOrder)
 	var order models.NsOrder
-	err = o.QueryTable(ordertable).Filter("id", intorderId).Filter("buyer_id", getLoginUserId()).One(&order)
+	err = o.QueryTable(orderTable).Filter("id", intOrderID).Filter("buyer_id", getLoginUserID()).One(&order)
 
 	if err == orm.ErrNoRows {
-		logs.Debug("order losed ,err:%v", err)
-		utils.ReturnHTTPError(&this.Controller, 400, "订单不存在")
+		logs.Debug("order lose ,err:%v", err)
+		utils.ReturnHTTPError(&c.Controller, 400, "订单不存在")
 		return
 	}
 
-	var orderinfo OrderInfo = OrderInfo{NsOrder: order}
-	orderinfo.ProvinceName = models.GetProvinceName(order.Province)
-	orderinfo.CityName = models.GetCityName(order.City)
-	orderinfo.DistrictName = models.GetDistrictName(order.District)
-	orderinfo.FullRegion = orderinfo.ProvinceName + orderinfo.CityName + orderinfo.DistrictName
+	var orderInfo = OrderInfo{NsOrder: order}
+	orderInfo.ProvinceName = models.GetProvinceName(order.Province)
+	orderInfo.CityName = models.GetCityName(order.City)
+	orderInfo.DistrictName = models.GetDistrictName(order.District)
+	orderInfo.FullRegion = orderInfo.ProvinceName + orderInfo.CityName + orderInfo.DistrictName
 
-	lastestexpressinfo := models.GetLatestOrderExpress(intorderId)
-	orderinfo.Express = lastestexpressinfo
+	lastExpressInfo := models.GetLatestOrderExpress(intOrderID)
+	orderInfo.Express = lastExpressInfo
 
-	ordergoodstable := new(models.NsOrderGoods)
-	var ordergoods []models.NsOrderGoods
+	orderGoodsTable := new(models.NsOrderGoods)
+	var orderGoods []models.NsOrderGoods
 
-	o.QueryTable(ordergoodstable).Filter("order_id", intorderId).All(&ordergoods)
+	_, _ = o.QueryTable(orderGoodsTable).Filter("order_id", intOrderID).All(&orderGoods)
 
-	orderinfo.OrderStatusText = models.GetOrderStatusText(intorderId)
-	orderinfo.FormatAddTime = utils.FormatTimestamp(orderinfo.CreateTime, "2006-01-02 03:04:05 PM")
-	orderinfo.FormatFinalPlayTime = utils.FormatTimestamp(1234, "04:05")
+	orderInfo.OrderStatusText = models.GetOrderStatusText(intOrderID)
+	orderInfo.FormatAddTime = utils.FormatTimestamp(orderInfo.CreateTime, "2006-01-02 03:04:05 PM")
+	orderInfo.FormatFinalPlayTime = utils.FormatTimestamp(1234, "04:05")
 
-	if orderinfo.OrderStatus == 0 {
+	if orderInfo.OrderStatus == 0 {
 		//todo 订单超时逻辑
 		logs.Debug("order timeout ,err:%v", err)
-		utils.ReturnHTTPError(&this.Controller, 400, "订单超时")
+		utils.ReturnHTTPError(&c.Controller, 400, "订单超时")
 		return
 	}
 
-	handleoption := models.GetOrderHandleOption(intorderId)
-	utils.ReturnHTTPSuccess(&this.Controller, OrderDetailRtnJson{
-		OrderInfo:    orderinfo,
-		OrderGoods:   ordergoods,
-		HandleOption: handleoption,
+	handleOption := models.GetOrderHandleOption(intOrderID)
+	utils.ReturnHTTPSuccess(&c.Controller, OrderDetailRtnJSON{
+		OrderInfo:    orderInfo,
+		OrderGoods:   orderGoods,
+		HandleOption: handleOption,
 	})
 	return
 }
 
+// SubmitOrder SubmitOrder
 type SubmitOrder struct {
-	AddressId int    `json:"addressId"`
-	Ids       string `json:"ids"`
+	AddressID int    `json:"addressId"`
+	IDs       string `json:"ids"`
 }
 
-func (this *OrderController) Order_Submit() {
+// OrderSubmit OrderSubmit
+func (c *OrderController) OrderSubmit() {
 	var err error
 	defer func() {
 		if err != nil {
 			logs.Debug("this has a err ,err:%v", err)
 		}
-		this.ServeJSON()
+		c.ServeJSON()
 		return
 	}()
 	var input SubmitOrder
-	body := this.Ctx.Input.RequestBody
+	body := c.Ctx.Input.RequestBody
 	err = json.Unmarshal(body, &input)
 	if err != nil {
 		logs.Debug("json Unmarshal err，err:%v", err)
-		utils.ReturnHTTPError(&this.Controller, 400, "参数错误")
+		utils.ReturnHTTPError(&c.Controller, 400, "参数错误")
 		return
 	}
-	intaddressId := input.AddressId
-	ids := input.Ids
+	intAddressID := input.AddressID
+	ids := input.IDs
 	if ids == "" {
 		logs.Debug("input.ids err，err:%v", err)
-		utils.ReturnHTTPError(&this.Controller, 400, "没有选择购物车商品")
+		utils.ReturnHTTPError(&c.Controller, 400, "没有选择购物车商品")
 		return
 	}
 	//查询用户
 	o := orm.NewOrm()
-	usertable := new(models.SysUser)
+	userTable := new(models.SysUser)
 	var user models.SysUser
-	err = o.QueryTable(usertable).Filter("uid", getLoginUserId()).One(&user)
+	err = o.QueryTable(userTable).Filter("uid", getLoginUserID()).One(&user)
 	if err == orm.ErrNoRows {
 		logs.Debug("no user，err:%v", err)
-		utils.ReturnHTTPError(&this.Controller, 400, "用户未登陆")
+		utils.ReturnHTTPError(&c.Controller, 400, "用户未登陆")
 	}
 
 	//用户地址检查
-	addresstable := new(models.NsMemberExpressAddress)
+	addressTable := new(models.NsMemberExpressAddress)
 	var address models.NsMemberExpressAddress
 
-	err = o.QueryTable(addresstable).Filter("id", intaddressId).One(&address)
+	err = o.QueryTable(addressTable).Filter("id", intAddressID).One(&address)
 	if err == orm.ErrNoRows {
 		logs.Debug("no selectting address，err:%v", err)
-		utils.ReturnHTTPError(&this.Controller, 400, "请选择收获地址")
+		utils.ReturnHTTPError(&c.Controller, 400, "请选择收获地址")
 	}
 	//用户购物车检查
 	idsArray := strings.Split(ids, ",")
-	carttable := new(models.NsCart)
+	cartTable := new(models.NsCart)
 	var carts []models.NsCart
-	_, err = o.QueryTable(carttable).Filter("buyer_id", getLoginUserId()).Filter("cart_id__in", idsArray).All(&carts)
+	_, err = o.QueryTable(cartTable).Filter("buyer_id", getLoginUserID()).Filter("cart_id__in", idsArray).All(&carts)
 	if err == orm.ErrNoRows {
-		utils.ReturnHTTPError(&this.Controller, 400, "请选择商品")
+		utils.ReturnHTTPError(&c.Controller, 400, "请选择商品")
 	}
 	//开启事务
 	var (
 		freightPrice    float64
-		goodstotalprice float64
-		ordertotalprice float64
+		goodsTotalPrice float64
+		orderTotalPrice float64
 		actualprice     float64
-		orderinfo       models.NsOrder
+		orderInfo       models.NsOrder
 	)
-	o.Begin()
+	_ = o.Begin()
 	defer func() {
 		if err != nil {
-			o.Rollback()
+			_ = o.Rollback()
 			logs.Debug("this has a err ,err:%v", err)
-			utils.ReturnHTTPError(&this.Controller, 400, "删除失败")
-			return
-		} else {
-			err = o.Commit()
-			utils.ReturnHTTPSuccess(&this.Controller, orderinfo)
+			utils.ReturnHTTPError(&c.Controller, 400, "删除失败")
 			return
 		}
+		err = o.Commit()
+		utils.ReturnHTTPSuccess(&c.Controller, orderInfo)
+		return
+
 	}()
 
 	for _, val := range carts {
-		goodstotalprice += float64(val.Number) * val.Price
+		goodsTotalPrice += float64(val.Number) * val.Price
 	}
-	ordertotalprice = goodstotalprice - freightPrice
-	actualprice = ordertotalprice
-	orderinfo = models.NsOrder{
+	orderTotalPrice = goodsTotalPrice - freightPrice
+	actualprice = orderTotalPrice
+	orderInfo = models.NsOrder{
 		OrderSn:      models.GenerateOrderNumber(),
 		OutTradeNo:   models.CreateOutTradeNo(),
 		OrderType:    1,
@@ -247,66 +255,67 @@ func (this *OrderController) Order_Submit() {
 		ShippingType: 1,
 		OrderFrom:    "3",
 		UserName:     user.UserName,
-		UserId:       getLoginUserId(),
+		UserID:       getLoginUserID(),
 		Consignee:    address.Name,
 		Mobile:       address.Mobile,
-		Province:     address.ProvinceId,
-		City:         address.CityId,
-		District:     address.DistrictId,
+		Province:     address.ProvinceID,
+		City:         address.CityID,
+		District:     address.DistrictID,
 		Address:      address.Address,
 		ShippingFee:  freightPrice,
-		GoodsMoney:   goodstotalprice,
-		OrderMoney:   ordertotalprice,
+		GoodsMoney:   goodsTotalPrice,
+		OrderMoney:   orderTotalPrice,
 		PayMoney:     actualprice,
 		CreateTime:   utils.GetTimestamp(),
 	}
 
-	orderid, err := o.Insert(&orderinfo)
+	orderID, err := o.Insert(&orderInfo)
 	if err != nil {
 		logs.Debug("订单提交失败,error:%v", err)
 		return
 	}
-	orderinfo.Id = int(orderid)
-	var checkedIds []int
+	orderInfo.ID = int(orderID)
+	var checkedIDs []int
 	for _, item := range carts {
-		checkedIds = append(checkedIds, item.Id)
+		checkedIDs = append(checkedIDs, item.ID)
 		ordergood := models.NsOrderGoods{
-			OrderId:        int(orderid),
-			GoodsId:        item.GoodsId,
+			OrderID:        int(orderID),
+			GoodsID:        item.GoodsID,
 			GoodsName:      item.GoodsName,
-			SkuId:          item.SkuId,
+			SkuID:          item.SkuID,
 			SkuName:        item.SkuName,
 			Price:          item.Price,
 			Number:         item.Number,
 			GoodsMoney:     item.Price * float64(item.Number),
 			GoodsPicture:   item.GoodsPicture,
-			BuyerId:        item.UserId,
+			BuyerID:        item.UserID,
 			GoodsType:      1,
 			OrderType:      1,
 			OrderStatus:    1,
 			ShippingStatus: 0,
 			RefundType:     1,
 		}
-		o.Insert(&ordergood)
+		_, _ = o.Insert(&ordergood)
 	}
 
-	models.DeleteBuyGoods(getLoginUserId(), checkedIds)
-	utils.ReturnHTTPSuccess(&this.Controller, orderinfo)
+	models.DeleteBuyGoods(getLoginUserID(), checkedIDs)
+	utils.ReturnHTTPSuccess(&c.Controller, orderInfo)
 }
 
-func (this *OrderController) Order_Express() {
-	orderId := this.GetString("orderId")
-	intorderId := utils.String2Int(orderId)
+// OrderExpress OrderExpress
+func (c *OrderController) OrderExpress() {
+	orderID := c.GetString("orderId")
+	intOrderID := utils.String2Int(orderID)
 
-	if orderId == "" {
-		logs.Debug("order[%v] losed", intorderId)
-		utils.ReturnHTTPError(&this.Controller, 400, "订单不存在")
-		this.ServeJSON()
+	if orderID == "" {
+		logs.Debug("order[%v] lose", intOrderID)
+		utils.ReturnHTTPError(&c.Controller, 400, "订单不存在")
+		c.ServeJSON()
 		return
 	}
 
-	latestexpressinfo := models.GetLatestOrderExpress(intorderId)
+	latestExpressInfo := models.GetLatestOrderExpress(intOrderID)
 
-	utils.ReturnHTTPSuccess(&this.Controller, latestexpressinfo)
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, latestExpressInfo)
+	c.ServeJSON()
 }

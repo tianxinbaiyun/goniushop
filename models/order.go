@@ -10,20 +10,22 @@ import (
 	"github.com/tianxinbaiyun/goniushop/utils"
 )
 
-func GetOrderStatusText(orderid int) string {
+// GetOrderStatusText GetOrderStatusText
+func GetOrderStatusText(orderID int) string {
 
 	o := orm.NewOrm()
-	ordertable := new(NsOrder)
+	orderTable := new(NsOrder)
 	var order NsOrder
-	o.QueryTable(ordertable).Filter("id", orderid).One(&order)
-	var statustext string = "未付款"
+	o.QueryTable(orderTable).Filter("id", orderID).One(&order)
+	var statusText = "未付款"
 	switch order.OrderStatus {
 	case 0:
-		statustext = "未付款"
+		statusText = "未付款"
 	}
-	return statustext
+	return statusText
 }
 
+// OrderHandleOption OrderHandleOption
 type OrderHandleOption struct {
 	Cancel   bool `json:"cancel"`
 	Delete   bool `json:"delete"`
@@ -35,7 +37,8 @@ type OrderHandleOption struct {
 	Buy      bool `json:"buy"`
 }
 
-func GetOrderHandleOption(orderid int) OrderHandleOption {
+// GetOrderHandleOption GetOrderHandleOption
+func GetOrderHandleOption(orderID int) OrderHandleOption {
 
 	// 订单流程：下单成功－》支付订单－》发货－》收货－》评论
 	// 订单相关状态字段设计，采用单个字段表示全部的订单状态
@@ -45,35 +48,36 @@ func GetOrderHandleOption(orderid int) OrderHandleOption {
 	// 4xx表示订单退换货相关的状态,401没有发货，退款402,已收货，退款退货
 	// 如果订单已经取消或是已完成，则可删除和再次购买
 
-	var handoption OrderHandleOption = OrderHandleOption{false, false, false, false, false, false, false, false}
+	var handOption = OrderHandleOption{false, false, false, false, false, false, false, false}
 
 	o := orm.NewOrm()
-	ordertable := new(NsOrder)
+	orderTable := new(NsOrder)
 	var order NsOrder
-	o.QueryTable(ordertable).Filter("id", orderid).One(&order)
+	o.QueryTable(orderTable).Filter("id", orderID).One(&order)
 
 	switch order.OrderStatus {
 	case 0:
-		handoption.Cancel = true
-		handoption.Pay = true
+		handOption.Cancel = true
+		handOption.Pay = true
 	case 101:
-		handoption.Delete = true
-		handoption.Buy = true
+		handOption.Delete = true
+		handOption.Buy = true
 	case 201:
-		handoption.Return = true
+		handOption.Return = true
 	case 300:
-		handoption.Cancel = true
-		handoption.Pay = true
-		handoption.Return = true
+		handOption.Cancel = true
+		handOption.Pay = true
+		handOption.Return = true
 	case 301:
-		handoption.Delete = true
-		handoption.Comment = true
-		handoption.Buy = true
+		handOption.Delete = true
+		handOption.Comment = true
+		handOption.Buy = true
 	}
 
-	return handoption
+	return handOption
 }
 
+// GenerateOrderNumber GenerateOrderNumber
 func GenerateOrderNumber() string {
 
 	year := time.Now().Year()     //年
@@ -83,40 +87,44 @@ func GenerateOrderNumber() string {
 	minute := time.Now().Minute() //分钟
 	// second := time.Now().Second() //秒
 
-	stryear := utils.Int2String(year)        //年
-	strmonth := utils.Int2String(int(month)) //月
-	strday := utils.Int2String(day)          //日
-	strhour := utils.Int2String(hour)        //小时
-	strminute := utils.Int2String(minute)    //分钟
-	// strsecond := utils.Int2String(second)    //秒
+	strYear := utils.Int2String(year)        //年
+	strMonth := utils.Int2String(int(month)) //月
+	strDay := utils.Int2String(day)          //日
+	strHour := utils.Int2String(hour)        //小时
+	strMinute := utils.Int2String(minute)    //分钟
+	// strSecond := utils.Int2String(second)    //秒
 
-	strmonth2 := fmt.Sprintf("%02s", strmonth)
-	strday2 := fmt.Sprintf("%02s", strday)
-	strhour2 := fmt.Sprintf("%02s", strhour)
-	strminute2 := fmt.Sprintf("%02s", strminute)
-	// strsecond2 := fmt.Sprintf("%02s", strsecond)
+	strMonth2 := fmt.Sprintf("%02s", strMonth)
+	strDay2 := fmt.Sprintf("%02s", strDay)
+	strHour2 := fmt.Sprintf("%02s", strHour)
+	strMinute2 := fmt.Sprintf("%02s", strMinute)
+	// strSecond2 := fmt.Sprintf("%02s", strSecond)
 
-	timeStr := stryear + strmonth2 + strday2 + strhour2 + strminute2
+	timeStr := strYear + strMonth2 + strDay2 + strHour2 + strMinute2
 
 	generateOrderNumber := GetLastOrderSn(timeStr)
 	return generateOrderNumber
 }
+
+// GetLastOrderSn GetLastOrderSn
 func GetLastOrderSn(timeStr string) (generateOrderNumber string) {
 	o := orm.NewOrm()
-	ordertable := new(NsOrder)
+	orderTable := new(NsOrder)
 	var order NsOrder
-	o.QueryTable(ordertable).OrderBy("order_id").One(&order)
+	o.QueryTable(orderTable).OrderBy("order_id").One(&order)
 	lastOrderSn := order.OrderSn
 	if timeStr == lastOrderSn[0:12] {
 		number, _ := strconv.Atoi(lastOrderSn[12:])
 		number++
 		generateOrderNumber = fmt.Sprintf("%v%4d", timeStr, number)
 		return
-	} else {
-		generateOrderNumber = fmt.Sprintf("%v0001", timeStr)
-		return
 	}
+	generateOrderNumber = fmt.Sprintf("%v0001", timeStr)
+	return
+
 }
+
+// CreateOutTradeNo CreateOutTradeNo
 func CreateOutTradeNo() (outTradeNo string) {
 	timeStr := utils.GetTimestamp()
 	randStr := rand.Intn(8999) + 1000
